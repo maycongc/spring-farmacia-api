@@ -1,0 +1,16 @@
+spring:
+  messages:
+    basename: messages
+    encoding: UTF-8
+    cache-duration: 3600s # 1 hora
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: "yyyy-MM-dd 'T'HH:mm:ss.SSS'Z'"
+    time-zone: UTC
+
+logging:
+  level:
+    root: INFO
+    br.com.projeto.spring: DEBUG
