@@ -17,6 +17,7 @@ import br.com.projeto.spring.mapper.UsuarioMapper;
 import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.security.JwtUtil;
 import br.com.projeto.spring.service.AuthService;
+import br.com.projeto.spring.util.Util;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -35,7 +36,12 @@ public class AuthServiceImpl implements AuthService {
         String username = request.username();
         String senha = request.senha();
 
-        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, senha));
+        try {
+            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, senha));
+        } catch (AuthenticationException e) {
+            throw new AuthenticationException(
+                    Util.resolveMensagem(ValidationMessagesKeys.AUTENTICACAO_FALHA, e.getMessage())) {};
+        }
 
         String accessToken = jwtUtil.generateToken(username);
         String refreshToken = jwtUtil.generateRefreshToken(username);
@@ -49,7 +55,7 @@ public class AuthServiceImpl implements AuthService {
     public TokenResponse refreshToken(String refreshToken) throws AuthenticationException {
 
         if (!jwtUtil.validateToken(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
-            throw new AuthenticationException("Refresh token inválido") {};
+            throw new AuthenticationException(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_INVALIDO) {};
         }
 
         String username = jwtUtil.getUsernameFromToken(refreshToken);

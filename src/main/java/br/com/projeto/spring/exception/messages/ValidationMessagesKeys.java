@@ -33,4 +33,7 @@ public class ValidationMessagesKeys {
     public static final String ERRO_VALIDACAO = "erro.validacao";
     public static final String ERRO_INTERNO_INESPERADO = "erro.interno.inesperado";
 
+    public static final String AUTENTICACAO_FALHA = "autenticacao.falha";
+    public static final String AUTENTICACAO_REFRESH_TOKEN_INVALIDO = "autenticacao.refresh_token.invalido";
+
 }

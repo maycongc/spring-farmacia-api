@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.lang.NonNull;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -41,6 +42,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         String mensagemErro = Util.resolveMensagem(ex.getMessage());
 
         return buildErrorResponse(HttpStatus.CONFLICT, mensagemErro, null);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<Object> handleAuthenticationException(AuthenticationException ex) {
+        String mensagemErro = Util.resolveMensagem(ex.getMessage());
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, mensagemErro, null);
     }
 
     @Override

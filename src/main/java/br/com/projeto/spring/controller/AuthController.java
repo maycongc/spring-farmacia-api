@@ -1,10 +1,8 @@
 package br.com.projeto.spring.controller;
 
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -34,15 +32,10 @@ public class AuthController {
             @Valid
             LoginRequest request) {
 
-        try {
-            TokenResponse response = service.login(request);
-            ResponseCookie cookie = UtilCookie.gerarCookieRefreshToken(response.refreshToken());
+        TokenResponse response = service.login(request);
+        ResponseCookie cookie = UtilCookie.gerarCookieRefreshToken(response.refreshToken());
 
-            return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
-
-        } catch (AuthenticationException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(response);
     }
 
     @PostMapping("/refresh")
