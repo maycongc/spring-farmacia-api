@@ -1,12 +1,8 @@
 package br.com.projeto.spring.config;
 
-import br.com.projeto.spring.repository.UsuarioRepository;
-import br.com.projeto.spring.domain.model.Usuario;
-import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
-import br.com.projeto.spring.security.JwtAuthenticationFilter;
-import br.com.projeto.spring.security.JwtUtil;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -19,6 +15,12 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import br.com.projeto.spring.domain.model.Usuario;
+import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
+import br.com.projeto.spring.repository.UsuarioRepository;
+import br.com.projeto.spring.security.JwtAuthenticationFilter;
+import br.com.projeto.spring.security.JwtUtil;
 
 /**
  * Configuração de segurança da aplicação. Define beans relacionados à segurança, como o
@@ -60,9 +62,12 @@ public class SecurityConfig {
             throws Exception {
         http.csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(
-                        auth -> auth.requestMatchers("/auth/**", "/public/**").permitAll().anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .authorizeHttpRequests(auth -> auth
+
+                        .requestMatchers(HttpMethod.POST, "/usuarios").permitAll()
+                        .requestMatchers("/auth/**", "/public/**").permitAll().anyRequest().authenticated()
+
+                ).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
