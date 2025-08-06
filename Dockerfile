@@ -1,5 +1,5 @@
 # Use a imagem oficial do Java 21
-FROM openjdk:21-jdk-alpine
+FROM eclipse-temurin:21-jdk
 
 # Copie o jar gerado para dentro do container
 COPY target/spring-0.0.1-SNAPSHOT.jar app.jar
