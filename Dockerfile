@@ -6,6 +6,9 @@ WORKDIR /app
 # Copie o código fonte para dentro do container
 COPY . .
 
+# Dê permissão de execução ao mvnw
+RUN chmod +x mvnw
+
 # Execute o build do Maven para gerar o jar
 RUN ./mvnw clean package -DskipTests
 
