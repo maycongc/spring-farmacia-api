@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.lang.NonNull;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
@@ -22,6 +23,7 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 
 import br.com.projeto.spring.exception.EntityInUseException;
 import br.com.projeto.spring.exception.ResourceNotFoundException;
+import br.com.projeto.spring.exception.ValidationException;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import br.com.projeto.spring.util.Util;
 
@@ -48,6 +50,22 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleAuthenticationException(AuthenticationException ex) {
         String mensagemErro = Util.resolveMensagem(ex.getMessage());
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, mensagemErro, null);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Object> handleAccessDeniedException(AccessDeniedException ex) {
+        String mensagemErro = Util.resolveMensagem(ex.getMessage());
+        return buildErrorResponse(HttpStatus.FORBIDDEN, mensagemErro, null);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<Object> handleValidationException(ValidationException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), ex.getErrors());
     }
 
     @Override
@@ -138,11 +156,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
         String mensagemErro = Util.resolveMensagem(ValidationMessagesKeys.ERRO_VALIDACAO);
         return buildErrorResponse(HttpStatus.BAD_REQUEST, mensagemErro, errors);
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex) {
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
     }
 
     @ExceptionHandler(Exception.class)

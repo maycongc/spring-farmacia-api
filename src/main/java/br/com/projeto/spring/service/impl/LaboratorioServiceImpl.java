@@ -94,7 +94,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
 
         Laboratorio laboratorio = mapper.toEntity(request);
 
-        validator.validaCriacao(laboratorio);
+        validator.validarCadastro(laboratorio);
 
         repository.save(laboratorio);
         return mapper.toResponse(laboratorio);
@@ -114,7 +114,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
 
         List<Laboratorio> laboratorios = request.stream().map(mapper::toEntity).toList();
 
-        validator.validaCriacao(laboratorios);
+        validator.validarCadastro(laboratorios);
 
         repository.saveAll(laboratorios);
         return laboratorios.stream().map(mapper::toResponse).toList();
@@ -138,7 +138,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO));
 
         mapper.updateEntity(laboratorio, request);
-        validator.validaAtualizacao(laboratorio);
+        validator.validarAtualizacao(laboratorio);
 
         repository.save(laboratorio);
         return mapper.toResponse(laboratorio);
@@ -160,7 +160,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
         Laboratorio laboratorio = repository.findById(uuid)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO));
 
-        validator.validaExclusao(laboratorio, uuid);
+        validator.validarExclusao(laboratorio, uuid);
         repository.delete(laboratorio);
     }
 
@@ -176,7 +176,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
     public void deletarLaboratorioEmLote(List<String> ids) throws ResourceNotFoundException, IllegalArgumentException {
         List<UUID> uuids = ids.stream().map(UUID::fromString).toList();
         List<Laboratorio> laboratorios = repository.findAllById(uuids);
-        validator.validaExclusao(laboratorios, uuids);
+        validator.validarExclusao(laboratorios, uuids);
         repository.deleteAll(laboratorios);
     }
 }

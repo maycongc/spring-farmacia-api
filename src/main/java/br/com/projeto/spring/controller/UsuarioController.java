@@ -1,10 +1,14 @@
 package br.com.projeto.spring.controller;
 
+import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -29,7 +33,19 @@ public class UsuarioController {
 
     private final UsuarioService service;
 
+    @PostMapping
+    public ResponseEntity<UsuarioResponse> cadastrarUsuario(
+
+            @RequestBody
+            @Valid
+            UsuarioRequest request) {
+
+        UsuarioResponse response = service.cadastrarUsuario(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('usuario:read')")
     public ResponseEntity<UsuarioResponse> buscarUsuarioPorId(
 
             @PathVariable
@@ -39,6 +55,7 @@ public class UsuarioController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('usuario:read')")
     public ResponseEntity<PageResponse<UsuarioResponse>> listarUsuarios(
 
             @RequestParam(defaultValue = "0")
@@ -57,18 +74,8 @@ public class UsuarioController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping
-    public ResponseEntity<UsuarioResponse> cadastrarUsuario(
-
-            @RequestBody
-            @Valid
-            UsuarioRequest request) {
-
-        UsuarioResponse response = service.cadastrarUsuario(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
-
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('usuario:update') or #id == authentication.name")
     public ResponseEntity<UsuarioResponse> atualizarUsuario(
 
             @PathVariable
@@ -83,6 +90,7 @@ public class UsuarioController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('usuario:delete')")
     public ResponseEntity<Void> deletarUsuario(
 
             @PathVariable
@@ -91,4 +99,19 @@ public class UsuarioController {
         service.deletarUsuario(id);
         return ResponseEntity.ok().build();
     }
+
+    // @PatchMapping("/{id}/permissoes")
+    // @PreAuthorize("hasAuthority('usuario:update') and hasAuthority('permissao:manage')")
+    // public ResponseEntity<UsuarioResponse> atualizarPermissoesUsuario(
+
+    // @PathVariable
+    // String id,
+
+    // @RequestBody
+    // @Valid
+    // List<Long> request) {
+
+    // UsuarioResponse response = service.atualizarUsuario(id, request);
+    // return ResponseEntity.ok(response);
+    // }
 }

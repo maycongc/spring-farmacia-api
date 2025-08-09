@@ -86,14 +86,10 @@ public class UsuarioMapper {
         );
     }
 
-    public void updateEntity(Usuario usuario, UsuarioUpdateRequest request, PasswordEncoder passwordEncoder) {
+    public void updateEntity(Usuario usuario, UsuarioUpdateRequest request) {
 
         if (Util.preenchido(request.username())) {
             usuario.setUsername(request.username());
-        }
-
-        if (Util.preenchido(request.senha())) {
-            usuario.setSenha(passwordEncoder.encode(request.senha()));
         }
 
         if (Util.preenchido(request.nome())) {
@@ -135,6 +131,36 @@ public class UsuarioMapper {
         if (Util.preenchido(request.isAdmin())) {
             usuario.setAdmin(request.isAdmin());
         }
+    }
+
+    public Usuario copy(Usuario usuarioBanco) {
+
+        if (Util.vazio(usuarioBanco)) {
+            return null;
+        }
+
+        Usuario usuario = new Usuario();
+
+        usuario.setId(usuarioBanco.getId());
+        usuario.setUsername(usuarioBanco.getUsername());
+        usuario.setSenha(usuarioBanco.getSenha());
+        usuario.setNome(usuarioBanco.getNome());
+        usuario.setEmail(usuarioBanco.getEmail());
+        usuario.setCpf(usuarioBanco.getCpf());
+        usuario.setDataNascimento(usuarioBanco.getDataNascimento());
+        usuario.setTelefone(usuarioBanco.getTelefone());
+        usuario.setEndereco(usuarioBanco.getEndereco());
+        usuario.setComplemento(usuarioBanco.getComplemento());
+        usuario.setCidade(usuarioBanco.getCidade());
+        usuario.setUf(usuarioBanco.getUf());
+        usuario.setCep(usuarioBanco.getCep());
+        usuario.setAdmin(usuarioBanco.isAdmin());
+        usuario.setCreatedAt(usuarioBanco.getCreatedAt());
+        usuario.setUpdatedAt(usuarioBanco.getUpdatedAt());
+        usuario.setGruposUsuario(usuarioBanco.getGruposUsuario());
+        usuario.setPermissoes(usuarioBanco.getPermissoes());
+
+        return usuario;
     }
 
 }

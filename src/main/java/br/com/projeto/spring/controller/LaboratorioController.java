@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,6 +41,7 @@ public class LaboratorioController {
      * @return ResponseEntity com os dados do laboratório
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('laboratorio:read')")
     public ResponseEntity<LaboratorioResponse> buscarLaboratorioPorId(@PathVariable
     String id) {
         LaboratorioResponse response = service.buscarLaboratorioPorId(id);
@@ -54,6 +56,7 @@ public class LaboratorioController {
      * @return ResponseEntity com a lista paginada de laboratórios
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('laboratorio:read')")
     public ResponseEntity<PageResponse<LaboratorioResponse>> listarLaboratorios(@RequestParam(defaultValue = "0")
     String page, @RequestParam(defaultValue = "10")
     String pageSize) {
@@ -74,6 +77,7 @@ public class LaboratorioController {
      * @return ResponseEntity com a lista paginada de remédios
      */
     @GetMapping("/{id}/remedios")
+    @PreAuthorize("hasAuthority('laboratorio:read') and hasAuthority('remedio:read')")
     public ResponseEntity<PageResponse<RemedioResponse>> listarRemediosPorLaboratorio(@PathVariable
     String id, @RequestParam(defaultValue = "0")
     String page, @RequestParam(defaultValue = "10")
@@ -93,6 +97,7 @@ public class LaboratorioController {
      * @return ResponseEntity com o laboratório criado
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('laboratorio:create')")
     public ResponseEntity<LaboratorioResponse> cadastrarLaboratorio(@RequestBody
     @Valid
     LaboratorioRequest requestDTO) {
@@ -107,6 +112,7 @@ public class LaboratorioController {
      * @return ResponseEntity com a lista de laboratórios criados
      */
     @PostMapping("/lote")
+    @PreAuthorize("hasAuthority('laboratorio:create')")
     public ResponseEntity<List<LaboratorioResponse>> cadastrarLaboratorioEmLote(@RequestBody
     List<LaboratorioRequest> requestDTO) {
         if (requestDTO.isEmpty()) {
@@ -124,6 +130,7 @@ public class LaboratorioController {
      * @return ResponseEntity com o laboratório atualizado
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('laboratorio:update')")
     public ResponseEntity<LaboratorioResponse> atualizarLaboratorio(@PathVariable
     String id, @RequestBody
     @Valid
@@ -139,6 +146,7 @@ public class LaboratorioController {
      * @return ResponseEntity sem conteúdo
      */
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('laboratorio:delete')")
     public ResponseEntity<Void> deletarLaboratorio(@PathVariable
     String id) {
         service.deletarLaboratorio(id);
@@ -152,6 +160,7 @@ public class LaboratorioController {
      * @return ResponseEntity sem conteúdo
      */
     @DeleteMapping("/lote")
+    @PreAuthorize("hasAuthority('laboratorio:delete')")
     public ResponseEntity<Void> deletarLaboratorioEmLote(@RequestBody
     List<String> ids) {
         service.deletarLaboratorioEmLote(ids);

@@ -1,5 +1,6 @@
 package br.com.projeto.spring.service.impl;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -31,16 +32,15 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
 
     @Override
-    public TokenResponse login(LoginRequest request) throws AuthenticationException {
+    public TokenResponse login(LoginRequest request) throws AccessDeniedException {
 
         String username = request.username();
         String senha = request.senha();
 
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, senha));
-        } catch (AuthenticationException e) {
-            throw new AuthenticationException(
-                    Util.resolveMensagem(ValidationMessagesKeys.AUTENTICACAO_FALHA, e.getMessage())) {};
+        } catch (AccessDeniedException e) {
+            throw new AccessDeniedException(Util.resolveMensagem(ValidationMessagesKeys.AUTENTICACAO_FALHA)) {};
         }
 
         String accessToken = jwtUtil.generateToken(username);

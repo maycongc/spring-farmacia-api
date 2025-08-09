@@ -6,10 +6,12 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,7 +24,6 @@ import br.com.projeto.spring.service.RemedioService;
 import br.com.projeto.spring.util.Util;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PutMapping;
 
 @RestController
 @RequestMapping("/remedios")
@@ -38,6 +39,7 @@ public class RemedioController {
      * @return ResponseEntity contendo o DTO de resposta do remédio.
      */
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('remedio:read')")
     public ResponseEntity<RemedioResponse> buscarRemedioPorId(
 
             @PathVariable
@@ -55,6 +57,7 @@ public class RemedioController {
      * @return ResponseEntity contendo a página de DTOs de resposta de remédio.
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('remedio:read')")
     public ResponseEntity<PageResponse<RemedioResponse>> listarRemedios(
 
             @RequestParam(defaultValue = "10")
@@ -81,6 +84,7 @@ public class RemedioController {
      * @return ResponseEntity com o DTO do remédio criado.
      */
     @PostMapping
+    @PreAuthorize("hasAuthority('remedio:create')")
     public ResponseEntity<RemedioResponse> cadastrarRemedio(
 
             @RequestBody
@@ -99,6 +103,7 @@ public class RemedioController {
      * @return ResponseEntity com a lista de DTOs dos remédios criados.
      */
     @PostMapping("/lote")
+    @PreAuthorize("hasAuthority('remedio:create')")
     public ResponseEntity<List<RemedioResponse>> cadastrarRemediosEmLote(
 
             @RequestBody
@@ -117,6 +122,7 @@ public class RemedioController {
      * @return ResponseEntity com o DTO do remédio atualizado.
      */
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('remedio:update')")
     public ResponseEntity<RemedioResponse> atualizarRemedio(
 
             @PathVariable
@@ -131,6 +137,7 @@ public class RemedioController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('remedio:delete')")
     public ResponseEntity<Void> deletarRemedio(
 
             @PathVariable

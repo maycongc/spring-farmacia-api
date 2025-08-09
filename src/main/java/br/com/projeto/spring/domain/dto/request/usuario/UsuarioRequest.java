@@ -35,6 +35,7 @@ public record UsuarioRequest(
 
         String cidade,
 
+        @Pattern(regexp = "^[A-Z]{2}$", message = ValidationMessagesKeys.GENERICO_UF_INVALIDO)
         String uf,
 
         String cep,

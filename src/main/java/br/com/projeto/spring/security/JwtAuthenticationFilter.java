@@ -11,6 +11,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
+import br.com.projeto.spring.util.Util;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -38,12 +40,39 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             @NonNull
             FilterChain filterChain) throws ServletException, IOException {
 
-        String jwt = getJwtFromRequest(request);
+        String path = request.getServletPath();
 
-        if (StringUtils.hasText(jwt) && jwtUtil.validateToken(jwt)) {
+        // Ignora endpoints públicos e POST /usuarios
+        if (path.startsWith("/auth") || (path.equals("/usuarios") && "POST".equalsIgnoreCase(request.getMethod()))
+                || path.startsWith("/public") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        try {
+            String jwt = getJwtFromRequest(request);
+
+            if (!StringUtils.hasText(jwt)) {
+                SecurityContextHolder.clearContext();
+                sendUnauthorizedResponse(response, ValidationMessagesKeys.AUTENTICACAO_JWT_TOKEN_FALTANDO);
+                return;
+            }
+
+            if (!jwtUtil.validateToken(jwt)) {
+                SecurityContextHolder.clearContext();
+                sendUnauthorizedResponse(response, ValidationMessagesKeys.AUTENTICACAO_TOKEN_INVALIDO);
+                return;
+            }
+
             String username = jwtUtil.getUsernameFromToken(jwt);
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            if (userDetails == null || !userDetails.isEnabled()) {
+                SecurityContextHolder.clearContext();
+                sendUnauthorizedResponse(response, ValidationMessagesKeys.AUTENTICACAO_JWT_USUARIO_NAO_HABILITADO);
+                return;
+            }
 
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
@@ -51,9 +80,27 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-        }
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+
+        } catch (Exception e) {
+            SecurityContextHolder.clearContext();
+            sendUnauthorizedResponse(response, ValidationMessagesKeys.AUTENTICACAO_PROCESSAMENTO_JWT);
+        }
+    }
+
+    private void sendUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json; charset=UTF-8");
+
+        String errorMessage = Util.resolveMensagem(ValidationMessagesKeys.AUTENTICACAO_NAO_AUTORIZADO);
+
+        String json = String.format("{ \"timestamp\": \"%s\", \"status\": %d, \"error\": \"%s\", \"message\": \"%s\" }",
+                java.time.LocalDateTime.now(), HttpServletResponse.SC_UNAUTHORIZED, errorMessage,
+                Util.resolveMensagem(message));
+
+        response.getWriter().write(json);
+        response.getWriter().flush();
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {
