@@ -93,10 +93,9 @@ public class LaboratorioServiceImpl implements LaboratorioService {
     public LaboratorioResponse cadastrarLaboratorio(LaboratorioRequest request) throws IllegalArgumentException {
 
         Laboratorio laboratorio = mapper.toEntity(request);
-
         validator.validarCadastro(laboratorio);
-
         repository.save(laboratorio);
+
         return mapper.toResponse(laboratorio);
     }
 
@@ -113,10 +112,9 @@ public class LaboratorioServiceImpl implements LaboratorioService {
             throws IllegalArgumentException {
 
         List<Laboratorio> laboratorios = request.stream().map(mapper::toEntity).toList();
-
         validator.validarCadastro(laboratorios);
-
         repository.saveAll(laboratorios);
+
         return laboratorios.stream().map(mapper::toResponse).toList();
     }
 
@@ -139,8 +137,8 @@ public class LaboratorioServiceImpl implements LaboratorioService {
 
         mapper.updateEntity(laboratorio, request);
         validator.validarAtualizacao(laboratorio);
-
         repository.save(laboratorio);
+
         return mapper.toResponse(laboratorio);
     }
 

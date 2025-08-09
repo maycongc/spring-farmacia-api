@@ -28,6 +28,7 @@ public class Remedio extends BaseEntity {
     private String nome;
 
     @Enumerated(EnumType.STRING)
+    @NotNull(message = ValidationMessagesKeys.GENERICO_OBRIGATORIO)
     private Via via;
 
     @NotBlank(message = ValidationMessagesKeys.GENERICO_OBRIGATORIO)

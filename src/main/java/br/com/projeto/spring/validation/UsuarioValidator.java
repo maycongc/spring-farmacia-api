@@ -26,6 +26,10 @@ public class UsuarioValidator extends BaseValidator<Usuario> {
         this.usuarioRepository = usuarioRepository;
     }
 
+    private void validarUsuario(Usuario usuario) {
+        super.validar(usuario);
+    }
+
     @Override
     public void validarCadastro(Usuario usuario) {
         validarCadastro(List.of(usuario));
@@ -37,6 +41,7 @@ public class UsuarioValidator extends BaseValidator<Usuario> {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         for (Usuario usuario : usuarios) {
+            validarUsuario(usuario);
             validarPermissaoCriarTornarAdmin(usuario, auth);
             // Adicione outras regras de validação conforme necessário
         }
@@ -53,6 +58,7 @@ public class UsuarioValidator extends BaseValidator<Usuario> {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         for (Usuario usuarioAtualizado : usuariosAtualizados) {
+            validarUsuario(usuarioAtualizado);
             validarPermissaoTornarAdmin(usuarioAtualizado, auth);
             // Adicione outras regras de validação conforme necessário
         }

@@ -19,6 +19,7 @@ import br.com.projeto.spring.repository.LaboratorioRepository;
 import br.com.projeto.spring.repository.RemedioRepository;
 import br.com.projeto.spring.service.RemedioService;
 import br.com.projeto.spring.util.Util;
+import br.com.projeto.spring.validation.RemedioValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
@@ -29,6 +30,7 @@ public class RemedioServiceImpl implements RemedioService {
     private final RemedioRepository repository;
     private final LaboratorioRepository laboratorioRepository;
     private final RemedioMapper mapper;
+    private final RemedioValidator validator;
 
     @Override
     /**
@@ -77,6 +79,7 @@ public class RemedioServiceImpl implements RemedioService {
 
         Remedio remedio = mapper.toEntity(requestDTO);
         remedio.setLaboratorio(laboratorio);
+        validator.validarCadastro(remedio);
 
         repository.save(remedio);
 
@@ -104,6 +107,7 @@ public class RemedioServiceImpl implements RemedioService {
             remedio.setLaboratorio(laboratorio);
         });
 
+        validator.validarCadastro(remedios);
         repository.saveAll(remedios);
 
         return remedios.stream().map(mapper::toResponse).toList();
@@ -137,6 +141,7 @@ public class RemedioServiceImpl implements RemedioService {
         }
 
         mapper.updateEntity(remedio, request, laboratorio);
+        validator.validarAtualizacao(remedio);
         repository.save(remedio);
 
         return mapper.toResponse(remedio);
@@ -156,6 +161,7 @@ public class RemedioServiceImpl implements RemedioService {
         Remedio remedio = repository.findById(remedioId)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.REMEDIO_NAO_ENCONTRADO));
 
+        validator.validarExclusao(remedio);
         repository.delete(remedio);
     }
 }

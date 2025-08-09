@@ -29,6 +29,10 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
         this.repository = repository;
     }
 
+    private void validarLaboratorio(Laboratorio laboratorio) {
+        super.validar(laboratorio);
+    }
+
     @Override
     public void validarCadastro(Laboratorio laboratorio) {
         validarCadastro(List.of(laboratorio));
@@ -36,6 +40,11 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
 
     @Override
     public void validarCadastro(List<Laboratorio> laboratorios) {
+
+        for (Laboratorio laboratorio : laboratorios) {
+            validarLaboratorio(laboratorio);
+        }
+
         validarEmailsDuplicados(laboratorios);
         // Adicione aqui outras validações de cadastro se necessário
     }
@@ -47,7 +56,11 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
 
     @Override
     public void validarAtualizacao(List<Laboratorio> laboratorios) {
-        // Adicione aqui outras validações de atualização se necessário
+
+        for (Laboratorio laboratorio : laboratorios) {
+            validarLaboratorio(laboratorio);
+            // Adicione aqui outras validações de atualização se necessário
+        }
     }
 
     @Override
@@ -71,7 +84,7 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
         }
 
         validarRemediosExistentes(laboratorios);
-        // Outras validações de exclusão podem ser adicionadas aqui
+        // Adicione aqui outras validações de exclusão se necessário
     }
 
     private void validarEmailsDuplicados(List<Laboratorio> laboratorios) throws IllegalArgumentException {
