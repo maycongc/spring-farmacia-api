@@ -19,7 +19,7 @@ import br.com.projeto.spring.mapper.UsuarioMapper;
 import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.security.JwtUtil;
 import br.com.projeto.spring.service.AuthService;
-import br.com.projeto.spring.util.Util;
+import br.com.projeto.spring.i18n.MessageResolver;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -31,6 +31,7 @@ public class AuthServiceImpl implements AuthService {
 
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
+    private final MessageResolver messages;
 
     @Override
     public TokenResponse login(LoginRequest request) throws AccessDeniedException {
@@ -41,7 +42,7 @@ public class AuthServiceImpl implements AuthService {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, senha));
         } catch (AccessDeniedException e) {
-            throw new AccessDeniedException(Util.resolveMensagem(ValidationMessagesKeys.AUTENTICACAO_FALHA)) {};
+            throw new AccessDeniedException(messages.get(ValidationMessagesKeys.AUTENTICACAO_FALHA)) {};
         }
 
         String accessToken = jwtUtil.generateToken(username);

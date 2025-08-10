@@ -28,6 +28,7 @@ import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.security.JwtAuthenticationEntryPoint;
 import br.com.projeto.spring.security.JwtAuthenticationFilter;
 import br.com.projeto.spring.security.JwtUtil;
+import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.util.Util;
 
 /**
@@ -87,8 +88,9 @@ public class SecurityConfig {
     }
 
     @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
-        return new JwtAuthenticationFilter(jwtUtil, userDetailsService);
+    public JwtAuthenticationFilter jwtAuthenticationFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService,
+            MessageResolver messages) {
+        return new JwtAuthenticationFilter(jwtUtil, userDetailsService, messages);
     }
 
     @Bean

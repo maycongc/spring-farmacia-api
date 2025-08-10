@@ -5,19 +5,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Component;
-
 import br.com.projeto.spring.exception.ValidationException;
-import br.com.projeto.spring.util.Util;
+import br.com.projeto.spring.i18n.MessageResolver;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import lombok.RequiredArgsConstructor;
 
-@Component
-@RequiredArgsConstructor
 public abstract class BaseValidator<T> {
 
     private final Validator validator;
+    private final MessageResolver messages;
+
+    protected BaseValidator(Validator validator, MessageResolver messages) {
+        this.validator = validator;
+        this.messages = messages;
+    }
 
     protected void validar(T entidade) {
         Set<ConstraintViolation<T>> violacoes = validator.validate(entidade);
@@ -25,7 +26,7 @@ public abstract class BaseValidator<T> {
         if (!violacoes.isEmpty()) {
             Map<String, String> errors = violacoes.stream()
                     .collect(Collectors.toMap(v -> v.getPropertyPath().toString(),
-                            v -> Util.resolveMensagem(v.getMessage(), v.getPropertyPath().toString()),
+                            v -> messages.get(v.getMessage(), v.getPropertyPath().toString()),
                             (msg1, msg2) -> msg1 + ", " + msg2));
 
             throw new ValidationException("Dados inválidos", errors);

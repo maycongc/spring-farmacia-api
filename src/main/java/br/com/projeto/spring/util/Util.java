@@ -2,99 +2,19 @@ package br.com.projeto.spring.util;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import org.springframework.context.MessageSource;
-import org.springframework.context.NoSuchMessageException;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.stereotype.Component;
 
 import br.com.projeto.spring.domain.dto.response.PageResponse;
 
-@Component
 public class Util {
-
-    private static MessageSource messageSource;
-
-    public Util(MessageSource messageSource) {
-        Util.messageSource = messageSource;
-    }
-
-    /**
-     * Resolve uma mensagem internacionalizada a partir da chave informada, utilizando o MessageSource
-     * do Spring.
-     *
-     * @param key Chave da mensagem no arquivo de mensagens.
-     * @param args Argumentos opcionais para interpolação na mensagem.
-     * @return Mensagem resolvida ou a própria chave caso não encontrada.
-     */
-    public static String resolveMensagem(String key, Object[] args) {
-        Locale locale = LocaleContextHolder.getLocale();
-
-        if (preenchido(key)) {
-            try {
-                return messageSource.getMessage(key, args, locale);
-            } catch (NoSuchMessageException ignored) {
-                // não faz nada
-            }
-        }
-
-        return key;
-    }
-
-    /**
-     * Resolve uma mensagem internacionalizada a partir da chave informada, utilizando uma lista de
-     * argumentos.
-     *
-     * @param key Chave da mensagem no arquivo de mensagens.
-     * @param args Lista de argumentos para interpolação na mensagem.
-     * @return Mensagem resolvida ou a própria chave caso não encontrada.
-     */
-    public static String resolveMensagem(String key, java.util.List<?> args) {
-        return resolveMensagem(key, args != null ? args.toArray() : null);
-    }
-
-    /**
-     * Resolve uma mensagem internacionalizada a partir da chave informada, utilizando um argumento
-     * String.
-     *
-     * @param key Chave da mensagem no arquivo de mensagens.
-     * @param arg Argumento para interpolação na mensagem.
-     * @return Mensagem resolvida ou a própria chave caso não encontrada.
-     */
-    public static String resolveMensagem(String key, String arg) {
-        return resolveMensagem(key, new Object[] { arg });
-    }
-
-    /**
-     * Resolve uma mensagem internacionalizada a partir da chave informada, utilizando um argumento
-     * Number.
-     *
-     * @param key Chave da mensagem no arquivo de mensagens.
-     * @param arg Argumento numérico para interpolação na mensagem.
-     * @return Mensagem resolvida ou a própria chave caso não encontrada.
-     */
-    public static String resolveMensagem(String key, Number arg) {
-        return resolveMensagem(key, new Object[] { arg });
-    }
-
-    /**
-     * Resolve uma mensagem internacionalizada a partir da chave informada, sem argumentos.
-     *
-     * @param key Chave da mensagem no arquivo de mensagens.
-     * @return Mensagem resolvida ou a própria chave caso não encontrada.
-     */
-    public static String resolveMensagem(String key) {
-        return resolveMensagem(key, new Object[] {});
-    }
 
     /**
      * Converte um objeto para Integer, aceitando String ou Integer. Retorna null se não for possível

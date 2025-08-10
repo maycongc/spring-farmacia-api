@@ -12,7 +12,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
-import br.com.projeto.spring.util.Util;
+import br.com.projeto.spring.i18n.MessageResolver;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,10 +22,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
+    private final MessageResolver messages;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService, MessageResolver messages) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.messages = messages;
     }
 
     @Override
@@ -93,11 +95,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json; charset=UTF-8");
 
-        String errorMessage = Util.resolveMensagem(ValidationMessagesKeys.AUTENTICACAO_NAO_AUTORIZADO);
+        String errorMessage = messages.get(ValidationMessagesKeys.AUTENTICACAO_NAO_AUTORIZADO);
 
         String json = String.format("{ \"timestamp\": \"%s\", \"status\": %d, \"error\": \"%s\", \"message\": \"%s\" }",
                 java.time.LocalDateTime.now(), HttpServletResponse.SC_UNAUTHORIZED, errorMessage,
-                Util.resolveMensagem(message));
+                messages.get(message));
 
         response.getWriter().write(json);
         response.getWriter().flush();

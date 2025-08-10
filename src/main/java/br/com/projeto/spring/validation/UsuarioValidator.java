@@ -12,17 +12,16 @@ import br.com.projeto.spring.domain.model.Usuario;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.util.Util;
+import br.com.projeto.spring.i18n.MessageResolver;
 import jakarta.validation.Validator;
 
 @Component
 public class UsuarioValidator extends BaseValidator<Usuario> {
 
-    private final Validator validator;
     private final UsuarioRepository usuarioRepository;
 
-    public UsuarioValidator(Validator validator, UsuarioRepository usuarioRepository) {
-        super(validator);
-        this.validator = validator;
+    public UsuarioValidator(Validator validator, UsuarioRepository usuarioRepository, MessageResolver messages) {
+        super(validator, messages);
         this.usuarioRepository = usuarioRepository;
     }
 
@@ -71,9 +70,7 @@ public class UsuarioValidator extends BaseValidator<Usuario> {
 
     @Override
     public void validarExclusao(List<Usuario> usuarios) {
-        for (Usuario usuario : usuarios) {
-            // Adicione outras regras de validação conforme necessário
-        }
+        // Adicione outras regras de validação conforme necessário
     }
 
     private void validarPermissaoTornarAdmin(Usuario usuarioAtualizado, Authentication auth)

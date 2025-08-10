@@ -29,15 +29,22 @@ import br.com.projeto.spring.exception.ResourceNotFoundException;
 import br.com.projeto.spring.exception.ValidationException;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import br.com.projeto.spring.config.TraceIdFilter;
+import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.util.Util;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
+    private final MessageResolver messages;
+
+    public GlobalExceptionHandler(MessageResolver messages) {
+        this.messages = messages;
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<Object> handleResourceNotFound(ResourceNotFoundException ex) {
 
-        String mensagemErro = Util.resolveMensagem(ex.getMessage());
+        String mensagemErro = messages.get(ex.getMessage());
 
         return buildErrorResponse(HttpStatus.NOT_FOUND, mensagemErro, null);
     }
@@ -45,20 +52,20 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(EntityInUseException.class)
     public ResponseEntity<Object> handleEntityInUseException(EntityInUseException ex) {
 
-        String mensagemErro = Util.resolveMensagem(ex.getMessage());
+        String mensagemErro = messages.get(ex.getMessage());
 
         return buildErrorResponse(HttpStatus.CONFLICT, mensagemErro, null);
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<Object> handleAuthenticationException(AuthenticationException ex) {
-        String mensagemErro = Util.resolveMensagem(ex.getMessage());
+        String mensagemErro = messages.get(ex.getMessage());
         return buildErrorResponse(HttpStatus.UNAUTHORIZED, mensagemErro, null);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Object> handleAccessDeniedException(AccessDeniedException ex) {
-        String mensagemErro = Util.resolveMensagem(ex.getMessage());
+        String mensagemErro = messages.get(ex.getMessage());
         return buildErrorResponse(HttpStatus.FORBIDDEN, mensagemErro, null);
     }
 
@@ -94,14 +101,14 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             String key = error.getDefaultMessage();
             Object[] argumentos = error.getArguments();
 
-            String resolvedMessage = Util.resolveMensagem(key, argumentos);
+            String resolvedMessage = messages.get(key, argumentos);
 
             String fieldName = (error instanceof FieldError fe) ? fe.getField() : error.getObjectName();
 
             errors.merge(fieldName, resolvedMessage, (oldVal, newVal) -> oldVal + ", " + newVal);
         });
 
-        String mensagemErro = Util.resolveMensagem(ValidationMessagesKeys.ERRO_VALIDACAO);
+        String mensagemErro = messages.get(ValidationMessagesKeys.ERRO_VALIDACAO);
 
         return buildErrorResponse(HttpStatus.BAD_REQUEST, mensagemErro, errors);
     }
@@ -146,17 +153,17 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             String[] parts = fieldName.split("\\.");
             String realField = parts[parts.length - 1];
 
-            String resolvedMessage = Util.resolveMensagem(error.getDefaultMessage(), error.getArguments());
+            String resolvedMessage = messages.get(error.getDefaultMessage(), error.getArguments());
             errors.merge(idx + realField, resolvedMessage, (oldVal, newVal) -> oldVal + ", " + newVal);
         }));
 
-        String mensagemErro = Util.resolveMensagem(ValidationMessagesKeys.ERRO_VALIDACAO);
+        String mensagemErro = messages.get(ValidationMessagesKeys.ERRO_VALIDACAO);
         return buildErrorResponse(HttpStatus.BAD_REQUEST, mensagemErro, errors);
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Object> handleAllUncaught(Exception ex) {
-        String message = Util.resolveMensagem(ValidationMessagesKeys.ERRO_INTERNO_INESPERADO);
+        String message = messages.get(ValidationMessagesKeys.ERRO_INTERNO_INESPERADO);
 
         return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, message, null);
     }
@@ -176,7 +183,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             @NonNull
             WebRequest request) {
 
-        String mensagemErro = Util.resolveMensagem(ValidationMessagesKeys.ERRO_VALIDACAO);
+        String mensagemErro = messages.get(ValidationMessagesKeys.ERRO_VALIDACAO);
         return buildErrorResponse(HttpStatus.BAD_REQUEST, mensagemErro, null);
     }
 
@@ -195,10 +202,13 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             if (Util.preenchido(attrs)) {
 
                 var req = attrs.getRequest();
-                Object attr = req.getAttribute(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE);
-                if (attr instanceof String s && Util.preenchido(s))
-                    traceId = s;
-                path = req.getRequestURI();
+                if (Util.preenchido(req)) {
+                    Object attr = req.getAttribute(TraceIdFilter.TRACE_ID_REQUEST_ATTRIBUTE);
+                    if (attr instanceof String s && Util.preenchido(s)) {
+                        traceId = s;
+                    }
+                    path = req.getRequestURI();
+                }
             }
         } catch (Exception ignored) {
         }

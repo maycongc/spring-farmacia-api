@@ -14,18 +14,19 @@ import br.com.projeto.spring.exception.ValidationException;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import br.com.projeto.spring.repository.LaboratorioRepository;
 import br.com.projeto.spring.util.Util;
+import br.com.projeto.spring.i18n.MessageResolver;
 import jakarta.validation.Validator;
 
 @Component
 public class LaboratorioValidator extends BaseValidator<Laboratorio> {
 
-    private final Validator validator;
     private final LaboratorioRepository repository;
+    private final MessageResolver messages;
 
-    public LaboratorioValidator(Validator validator, LaboratorioRepository repository) {
-        super(validator);
-        this.validator = validator;
+    public LaboratorioValidator(Validator validator, LaboratorioRepository repository, MessageResolver messages) {
+        super(validator, messages);
         this.repository = repository;
+        this.messages = messages;
     }
 
     private void validarLaboratorio(Laboratorio laboratorio) {
@@ -101,8 +102,7 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
 
         if (Util.preenchido(emailsDuplicados)) {
 
-            String emails = String.join(", ", emailsDuplicados);
-            String mensagem = Util.resolveMensagem(ValidationMessagesKeys.LABORATORIO_EMAIL_UNICO);
+            String mensagem = messages.get(ValidationMessagesKeys.LABORATORIO_EMAIL_UNICO);
 
             throw new ValidationException(mensagem);
         }
@@ -131,7 +131,7 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
         }
 
         if (mensagemDetalhada.length() > 0) {
-            String mensagem = Util.resolveMensagem(ValidationMessagesKeys.LABORATORIO_EXCLUSAO_REMEDIOS_EXISTENTES,
+            String mensagem = messages.get(ValidationMessagesKeys.LABORATORIO_EXCLUSAO_REMEDIOS_EXISTENTES,
                     mensagemDetalhada.toString().trim());
             throw new EntityInUseException(mensagem);
         }
@@ -144,7 +144,7 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
         List<Long> idsNaoEncontrados = idsRequisitados.stream().filter(id -> !encontradosIds.contains(id)).toList();
 
         if (!idsNaoEncontrados.isEmpty()) {
-            String mensagem = Util.resolveMensagem(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO,
+            String mensagem = messages.get(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO,
                     String.join(", ", idsNaoEncontrados.stream().map(String::valueOf).toList()));
             throw new ResourceNotFoundException(mensagem);
         }

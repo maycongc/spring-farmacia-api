@@ -6,19 +6,13 @@ import org.springframework.stereotype.Component;
 
 import br.com.projeto.spring.domain.model.Remedio;
 import jakarta.validation.Validator;
+import br.com.projeto.spring.i18n.MessageResolver;
 
 @Component
 public class RemedioValidator extends BaseValidator<Remedio> {
 
-    private final Validator validator;
-
-    public RemedioValidator(Validator validator) {
-        super(validator);
-        this.validator = validator;
-    }
-
-    private void validarRemedio(Remedio remedio) {
-        super.validar(remedio);
+    public RemedioValidator(Validator validator, MessageResolver messages) {
+        super(validator, messages);
     }
 
     @Override
@@ -28,11 +22,7 @@ public class RemedioValidator extends BaseValidator<Remedio> {
 
     @Override
     public void validarCadastro(List<Remedio> remedios) {
-        for (Remedio remedio : remedios) {
-            validarRemedio(remedio);
-
-            // Adicione aqui novas validações conforme necessário
-        }
+        remedios.forEach(super::validar);
     }
 
     @Override
@@ -42,11 +32,7 @@ public class RemedioValidator extends BaseValidator<Remedio> {
 
     @Override
     public void validarAtualizacao(List<Remedio> remedios) {
-        for (Remedio remedio : remedios) {
-            validarRemedio(remedio);
-
-            // Adicione aqui novas validações conforme necessário
-        }
+        remedios.forEach(super::validar);
     }
 
     @Override
@@ -56,9 +42,7 @@ public class RemedioValidator extends BaseValidator<Remedio> {
 
     @Override
     public void validarExclusao(List<Remedio> remedios) {
-        for (Remedio remedio : remedios) {
-            // Adicione aqui novas validações conforme necessário
-        }
+        // Adicione aqui novas validações conforme necessário
     }
 
 }
