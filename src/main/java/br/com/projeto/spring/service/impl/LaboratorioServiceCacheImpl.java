@@ -7,6 +7,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.dto.request.laboratorio.LaboratorioRequest;
 import br.com.projeto.spring.domain.dto.request.laboratorio.LaboratorioUpdateRequest;
@@ -37,6 +38,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      * @return LaboratorioResponse correspondente
      */
     @Override
+    @Transactional(readOnly = true)
     public LaboratorioResponse buscarLaboratorioPorId(Long id) {
         return cacheLaboratorio.computeIfAbsent(id, laboratorioServiceImpl::buscarLaboratorioPorId);
     }
@@ -48,6 +50,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      * @return página de LaboratorioResponse
      */
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<LaboratorioResponse> listarLaboratorios(Pageable paginacao) {
         String cacheKey = "page:" + paginacao.getPageNumber() + ":" + paginacao.getPageSize() + ":"
                 + paginacao.getSort().toString();
@@ -63,6 +66,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      * @return página de RemedioResponse
      */
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(Long id, Pageable paginacao) {
         String cacheKey = String.format("remedios:%s:%d:%d:%s", id, paginacao.getPageNumber(), paginacao.getPageSize(),
                 paginacao.getSort().toString());

@@ -7,6 +7,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.dto.request.LoginRequest;
 import br.com.projeto.spring.domain.dto.response.TokenResponse;
@@ -68,6 +69,7 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UsuarioResponse obterUsuarioAtual() throws ResourceNotFoundException {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();

@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.dto.request.laboratorio.LaboratorioRequest;
 import br.com.projeto.spring.domain.dto.request.laboratorio.LaboratorioUpdateRequest;
@@ -22,7 +23,6 @@ import br.com.projeto.spring.repository.RemedioRepository;
 import br.com.projeto.spring.service.LaboratorioService;
 import br.com.projeto.spring.util.Util;
 import br.com.projeto.spring.validation.LaboratorioValidator;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -45,6 +45,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return LaboratorioResponse com os dados do laboratório
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
+    @Transactional(readOnly = true)
     public LaboratorioResponse buscarLaboratorioPorId(Long id) {
 
         Laboratorio laboratorio = repository.findById(id)
@@ -60,6 +61,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @param pageable informações de paginação
      * @return PageResponse contendo a lista de laboratórios
      */
+    @Transactional(readOnly = true)
     public PageResponse<LaboratorioResponse> listarLaboratorios(Pageable pageable) {
 
         Page<Laboratorio> page = repository.findAll(pageable);
@@ -74,6 +76,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @param paginacao informações de paginação
      * @return PageResponse contendo a lista de remédios do laboratório
      */
+    @Transactional(readOnly = true)
     public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(Long laboratorioId, Pageable paginacao) {
 
         Page<Remedio> page = remedioRepository.findByLaboratorioId(laboratorioId, paginacao);

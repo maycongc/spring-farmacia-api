@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.dto.request.remedio.RemedioRequest;
 import br.com.projeto.spring.domain.dto.response.PageResponse;
@@ -19,7 +20,6 @@ import br.com.projeto.spring.repository.RemedioRepository;
 import br.com.projeto.spring.service.RemedioService;
 import br.com.projeto.spring.util.Util;
 import br.com.projeto.spring.validation.RemedioValidator;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -39,6 +39,7 @@ public class RemedioServiceImpl implements RemedioService {
      * @return DTO de resposta do remédio.
      * @throws ResourceNotFoundException se o remédio não for encontrado.
      */
+    @Transactional(readOnly = true)
     public RemedioResponse buscarRemedioPorId(Long id) throws ResourceNotFoundException {
 
         Remedio remedio = repository.findById(id)
@@ -54,6 +55,7 @@ public class RemedioServiceImpl implements RemedioService {
      * @param paginacao informações de paginação.
      * @return Página de DTOs de resposta de remédio.
      */
+    @Transactional(readOnly = true)
     public PageResponse<RemedioResponse> listarRemedios(Pageable paginacao) {
 
         Page<Remedio> page = repository.findAll(paginacao);

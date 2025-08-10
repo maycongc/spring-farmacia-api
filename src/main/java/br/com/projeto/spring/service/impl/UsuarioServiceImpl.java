@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.dto.request.usuario.UsuarioRequest;
 import br.com.projeto.spring.domain.dto.request.usuario.UsuarioUpdateRequest;
@@ -17,7 +18,6 @@ import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.service.UsuarioService;
 import br.com.projeto.spring.util.Util;
 import br.com.projeto.spring.validation.UsuarioValidator;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -41,6 +41,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UsuarioResponse buscarUsuarioPorId(Long id) {
 
         Usuario usuario = repository.findById(id)
@@ -50,6 +51,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<UsuarioResponse> listarUsuarios(Pageable paginacao) {
         Page<Usuario> page = repository.findAll(paginacao);
         return Util.toPageResponse(page, mapper::toResponse);
