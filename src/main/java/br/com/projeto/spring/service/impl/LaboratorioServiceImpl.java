@@ -2,6 +2,10 @@ package br.com.projeto.spring.service.impl;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -46,6 +50,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "laboratorio", key = "#id")
     public LaboratorioResponse buscarLaboratorioPorId(Long id) {
 
         Laboratorio laboratorio = repository.findById(id)
@@ -62,6 +67,8 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return PageResponse contendo a lista de laboratórios
      */
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "laboratorioPages",
+            key = "#pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
     public PageResponse<LaboratorioResponse> listarLaboratorios(Pageable pageable) {
 
         Page<Laboratorio> page = repository.findAll(pageable);
@@ -77,6 +84,8 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return PageResponse contendo a lista de remédios do laboratório
      */
     @Transactional(readOnly = true)
+    @Cacheable(cacheNames = "laboratorioRemedios",
+            key = "#laboratorioId + ':' + #paginacao.pageNumber + ':' + #paginacao.pageSize + ':' + #paginacao.sort.toString()")
     public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(Long laboratorioId, Pageable paginacao) {
 
         Page<Remedio> page = remedioRepository.findByLaboratorioId(laboratorioId, paginacao);
@@ -92,6 +101,9 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return LaboratorioResponse com os dados do laboratório criado
      * @throws IllegalArgumentException se houver erro de validação
      */
+    @Caching(evict = { @CacheEvict(cacheNames = { "laboratorioPages", "laboratorioRemedios" }, allEntries = true) },
+            put = { @CachePut(cacheNames = "laboratorio", key = "#result.id()",
+                    condition = "#result != null && #result.id() != null") })
     public LaboratorioResponse cadastrarLaboratorio(LaboratorioRequest request) throws IllegalArgumentException {
 
         Laboratorio laboratorio = mapper.toEntity(request);
@@ -110,6 +122,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return lista de LaboratorioResponse com os laboratórios criados
      * @throws IllegalArgumentException se houver erro de validação
      */
+    @CacheEvict(cacheNames = { "laboratorioPages", "laboratorioRemedios" }, allEntries = true)
     public List<LaboratorioResponse> cadastrarLaboratorioEmLote(List<LaboratorioRequest> request)
             throws IllegalArgumentException {
 
@@ -130,6 +143,8 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return LaboratorioResponse com os dados atualizados
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
+    @CacheEvict(cacheNames = { "laboratorioPages", "laboratorioRemedios" }, allEntries = true)
+    @CachePut(cacheNames = "laboratorio", key = "#id")
     public LaboratorioResponse atualizarLaboratorio(Long id, LaboratorioUpdateRequest request)
             throws ResourceNotFoundException {
 
@@ -152,6 +167,8 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      * @throws EntityInUseException se não for possível excluir por possuir entidades relacionadas
      */
+    @Caching(evict = { @CacheEvict(cacheNames = "laboratorio", key = "#id"),
+            @CacheEvict(cacheNames = { "laboratorioPages", "laboratorioRemedios" }, allEntries = true) })
     public void deletarLaboratorio(Long id) throws ResourceNotFoundException, IllegalArgumentException {
 
         Laboratorio laboratorio = repository.findById(id)
@@ -170,6 +187,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se algum laboratório não for encontrado
      * @throws EntityInUseException se não for possível excluir por possuir entidades relacionadas
      */
+    @CacheEvict(cacheNames = { "laboratorio", "laboratorioPages", "laboratorioRemedios" }, allEntries = true)
     public void deletarLaboratorioEmLote(List<Long> ids) throws ResourceNotFoundException, IllegalArgumentException {
         List<Laboratorio> laboratorios = repository.findAllById(ids);
         validator.validarExclusao(laboratorios, ids);

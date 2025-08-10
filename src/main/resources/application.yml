@@ -10,7 +10,11 @@ spring:
     date-format: "yyyy-MM-dd 'T'HH:mm:ss.SSS'Z'"
     time-zone: UTC
 
+  cache:
+    cache-names: laboratorio,laboratorioPages,laboratorioRemedios
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=300s
+
 logging:
   level:
     root: INFO
-    br.com.projeto.spring: DEBUG
