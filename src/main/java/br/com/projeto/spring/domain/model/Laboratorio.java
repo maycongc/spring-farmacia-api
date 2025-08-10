@@ -1,7 +1,6 @@
 package br.com.projeto.spring.domain.model;
 
 import java.util.List;
-import java.util.UUID;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
@@ -19,23 +18,23 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class Laboratorio extends BaseEntity {
 
-	@NotBlank
-	private String nome;
+    @NotBlank
+    private String nome;
 
-	@NotBlank
-	private String endereco;
+    @NotBlank
+    private String endereco;
 
-	@NotBlank
-	private String telefone;
+    @NotBlank
+    private String telefone;
 
-	@NotBlank
-	@Email
-	private String email;
+    @NotBlank
+    @Email
+    private String email;
 
-	@OneToMany(mappedBy = "laboratorio")
-	private List<Remedio> remedios;
+    @OneToMany(mappedBy = "laboratorio")
+    private List<Remedio> remedios;
 
-	public Laboratorio(UUID id) {
-		this.setId(id);
-	}
+    public Laboratorio(Long id) {
+        this.setId(id);
+    }
 }

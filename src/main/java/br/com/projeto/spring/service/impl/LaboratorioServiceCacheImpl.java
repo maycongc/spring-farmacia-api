@@ -26,7 +26,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
 
     public final LaboratorioServiceImpl laboratorioServiceImpl;
 
-    private final Map<String, LaboratorioResponse> cacheLaboratorio = new ConcurrentHashMap<>();
+    private final Map<Long, LaboratorioResponse> cacheLaboratorio = new ConcurrentHashMap<>();
     private final Map<String, PageResponse<LaboratorioResponse>> cachePageLaboratorios = new ConcurrentHashMap<>();
     private final Map<String, PageResponse<RemedioResponse>> cachePageRemedios = new ConcurrentHashMap<>();
 
@@ -37,7 +37,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      * @return LaboratorioResponse correspondente
      */
     @Override
-    public LaboratorioResponse buscarLaboratorioPorId(String id) {
+    public LaboratorioResponse buscarLaboratorioPorId(Long id) {
         return cacheLaboratorio.computeIfAbsent(id, laboratorioServiceImpl::buscarLaboratorioPorId);
     }
 
@@ -63,7 +63,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      * @return página de RemedioResponse
      */
     @Override
-    public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(String id, Pageable paginacao) {
+    public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(Long id, Pageable paginacao) {
         String cacheKey = String.format("remedios:%s:%d:%d:%s", id, paginacao.getPageNumber(), paginacao.getPageSize(),
                 paginacao.getSort().toString());
 
@@ -124,7 +124,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      * @throws ResourceNotFoundException caso laboratório não exista
      */
     @Override
-    public LaboratorioResponse atualizarLaboratorio(String id, LaboratorioUpdateRequest request)
+    public LaboratorioResponse atualizarLaboratorio(Long id, LaboratorioUpdateRequest request)
             throws ResourceNotFoundException {
 
         LaboratorioResponse response = laboratorioServiceImpl.atualizarLaboratorio(id, request);
@@ -147,7 +147,7 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      *         excluído
      */
     @Override
-    public void deletarLaboratorio(String id) throws ResourceNotFoundException, EntityInUseException {
+    public void deletarLaboratorio(Long id) throws ResourceNotFoundException, EntityInUseException {
 
         laboratorioServiceImpl.deletarLaboratorio(id);
 
@@ -165,12 +165,12 @@ public class LaboratorioServiceCacheImpl implements LaboratorioService {
      *         excluído
      */
     @Override
-    public void deletarLaboratorioEmLote(List<String> ids) throws ResourceNotFoundException, EntityInUseException {
+    public void deletarLaboratorioEmLote(List<Long> ids) throws ResourceNotFoundException, EntityInUseException {
 
         laboratorioServiceImpl.deletarLaboratorioEmLote(ids);
 
         if (Util.preenchido(ids)) {
-            for (String id : ids) {
+            for (Long id : ids) {
                 cacheLaboratorio.remove(id);
                 cachePageRemedios.keySet().removeIf(key -> key.startsWith("remedios:" + id + ":"));
             }

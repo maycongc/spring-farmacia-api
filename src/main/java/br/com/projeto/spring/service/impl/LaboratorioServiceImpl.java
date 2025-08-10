@@ -1,7 +1,6 @@
 package br.com.projeto.spring.service.impl;
 
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -46,9 +45,9 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return LaboratorioResponse com os dados do laboratório
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
-    public LaboratorioResponse buscarLaboratorioPorId(String id) {
+    public LaboratorioResponse buscarLaboratorioPorId(Long id) {
 
-        Laboratorio laboratorio = repository.findById(UUID.fromString(id))
+        Laboratorio laboratorio = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO));
 
         return mapper.toResponse(laboratorio);
@@ -75,9 +74,9 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @param paginacao informações de paginação
      * @return PageResponse contendo a lista de remédios do laboratório
      */
-    public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(String laboratorioId, Pageable paginacao) {
+    public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(Long laboratorioId, Pageable paginacao) {
 
-        Page<Remedio> page = remedioRepository.findByLaboratorioId(UUID.fromString(laboratorioId), paginacao);
+        Page<Remedio> page = remedioRepository.findByLaboratorioId(laboratorioId, paginacao);
         return Util.toPageResponse(page, remedioMapper::toResponse);
     }
 
@@ -128,11 +127,10 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return LaboratorioResponse com os dados atualizados
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
-    public LaboratorioResponse atualizarLaboratorio(String id, LaboratorioUpdateRequest request)
+    public LaboratorioResponse atualizarLaboratorio(Long id, LaboratorioUpdateRequest request)
             throws ResourceNotFoundException {
-        UUID uuid = UUID.fromString(id);
 
-        Laboratorio laboratorio = repository.findById(uuid)
+        Laboratorio laboratorio = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO));
 
         mapper.updateEntity(laboratorio, request);
@@ -151,14 +149,12 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      * @throws EntityInUseException se não for possível excluir por possuir entidades relacionadas
      */
-    public void deletarLaboratorio(String id) throws ResourceNotFoundException, IllegalArgumentException {
+    public void deletarLaboratorio(Long id) throws ResourceNotFoundException, IllegalArgumentException {
 
-        UUID uuid = UUID.fromString(id);
-
-        Laboratorio laboratorio = repository.findById(uuid)
+        Laboratorio laboratorio = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO));
 
-        validator.validarExclusao(laboratorio, uuid);
+        validator.validarExclusao(laboratorio, id);
         repository.delete(laboratorio);
     }
 
@@ -171,10 +167,9 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se algum laboratório não for encontrado
      * @throws EntityInUseException se não for possível excluir por possuir entidades relacionadas
      */
-    public void deletarLaboratorioEmLote(List<String> ids) throws ResourceNotFoundException, IllegalArgumentException {
-        List<UUID> uuids = ids.stream().map(UUID::fromString).toList();
-        List<Laboratorio> laboratorios = repository.findAllById(uuids);
-        validator.validarExclusao(laboratorios, uuids);
+    public void deletarLaboratorioEmLote(List<Long> ids) throws ResourceNotFoundException, IllegalArgumentException {
+        List<Laboratorio> laboratorios = repository.findAllById(ids);
+        validator.validarExclusao(laboratorios, ids);
         repository.deleteAll(laboratorios);
     }
 }

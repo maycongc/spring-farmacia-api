@@ -1,7 +1,6 @@
 package br.com.projeto.spring.service.impl;
 
 import java.util.List;
-import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,9 +39,9 @@ public class RemedioServiceImpl implements RemedioService {
      * @return DTO de resposta do remédio.
      * @throws ResourceNotFoundException se o remédio não for encontrado.
      */
-    public RemedioResponse buscarRemedioPorId(String id) throws ResourceNotFoundException {
+    public RemedioResponse buscarRemedioPorId(Long id) throws ResourceNotFoundException {
 
-        Remedio remedio = repository.findById(UUID.fromString(id))
+        Remedio remedio = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.REMEDIO_NAO_ENCONTRADO));
 
         return mapper.toResponse(remedio);
@@ -72,9 +71,9 @@ public class RemedioServiceImpl implements RemedioService {
      */
     public RemedioResponse cadastrarRemedio(RemedioRequest requestDTO) throws ResourceNotFoundException {
 
-        UUID laboratorioId = UUID.fromString(requestDTO.laboratorio().id());
+        Long id = requestDTO.laboratorio().id();
 
-        Laboratorio laboratorio = laboratorioRepository.findById(laboratorioId)
+        Laboratorio laboratorio = laboratorioRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO));
 
         Remedio remedio = mapper.toEntity(requestDTO);
@@ -123,18 +122,16 @@ public class RemedioServiceImpl implements RemedioService {
      * @return DTO de resposta do remédio atualizado.
      * @throws ResourceNotFoundException se o remédio ou laboratório não for encontrado.
      */
-    public RemedioResponse atualizarRemedio(String id, RemedioRequest request) throws ResourceNotFoundException {
+    public RemedioResponse atualizarRemedio(Long id, RemedioRequest request) throws ResourceNotFoundException {
 
-        UUID remedioId = UUID.fromString(id);
-
-        Remedio remedio = repository.findById(remedioId)
+        Remedio remedio = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.REMEDIO_NAO_ENCONTRADO));
 
         Laboratorio laboratorio = null;
 
         if (Util.preenchido(() -> request.laboratorio().id())) {
 
-            UUID laboratorioId = UUID.fromString(request.laboratorio().id());
+            Long laboratorioId = request.laboratorio().id();
 
             laboratorio = laboratorioRepository.findById(laboratorioId).orElseThrow(
                     () -> new ResourceNotFoundException(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO));
@@ -155,10 +152,9 @@ public class RemedioServiceImpl implements RemedioService {
      * @param id ID do remédio a ser removido.
      * @throws ResourceNotFoundException se o remédio não for encontrado.
      */
-    public void deletarRemedio(String id) throws ResourceNotFoundException {
-        UUID remedioId = UUID.fromString(id);
+    public void deletarRemedio(Long id) throws ResourceNotFoundException {
 
-        Remedio remedio = repository.findById(remedioId)
+        Remedio remedio = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.REMEDIO_NAO_ENCONTRADO));
 
         validator.validarExclusao(remedio);

@@ -3,7 +3,6 @@ package br.com.projeto.spring.validation;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -73,11 +72,11 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
         validarExclusao(laboratorios, List.of());
     }
 
-    public void validarExclusao(Laboratorio laboratorio, UUID idRequisitado) {
+    public void validarExclusao(Laboratorio laboratorio, Long idRequisitado) {
         validarExclusao(List.of(laboratorio), List.of(idRequisitado));
     }
 
-    public void validarExclusao(List<Laboratorio> laboratorios, List<UUID> idsRequisitados) {
+    public void validarExclusao(List<Laboratorio> laboratorios, List<Long> idsRequisitados) {
 
         if (Util.preenchido(idsRequisitados)) {
             validarLaboratoriosEncontrados(idsRequisitados, laboratorios);
@@ -116,7 +115,10 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
             boolean existeRemediosRelacionados = repository.existsByIdAndRemediosIsNotEmpty(laboratorio.getId());
 
             if (existeRemediosRelacionados) {
-                String nomeLab = laboratorio.getNome() != null ? laboratorio.getNome() : laboratorio.getId().toString();
+
+                String nomeLab = Util.preenchido(() -> laboratorio.getNome()) ? laboratorio.getNome()
+                        : laboratorio.getId().toString();
+
                 mensagemDetalhada.append("- ").append(nomeLab).append(":\n");
 
                 if (laboratorio.getRemedios() != null && !laboratorio.getRemedios().isEmpty()) {
@@ -135,16 +137,15 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
         }
     }
 
-    private void validarLaboratoriosEncontrados(List<UUID> idsRequisitados, List<Laboratorio> encontrados)
+    private void validarLaboratoriosEncontrados(List<Long> idsRequisitados, List<Laboratorio> encontrados)
             throws ResourceNotFoundException {
-        List<String> encontradosIds = encontrados.stream().map(lab -> lab.getId().toString()).toList();
+        List<Long> encontradosIds = encontrados.stream().map(Laboratorio::getId).toList();
 
-        List<String> idsNaoEncontrados =
-                idsRequisitados.stream().map(UUID::toString).filter(id -> !encontradosIds.contains(id)).toList();
+        List<Long> idsNaoEncontrados = idsRequisitados.stream().filter(id -> !encontradosIds.contains(id)).toList();
 
         if (!idsNaoEncontrados.isEmpty()) {
             String mensagem = Util.resolveMensagem(ValidationMessagesKeys.LABORATORIO_NAO_ENCONTRADO,
-                    String.join(", ", idsNaoEncontrados));
+                    String.join(", ", idsNaoEncontrados.stream().map(String::valueOf).toList()));
             throw new ResourceNotFoundException(mensagem);
         }
     }

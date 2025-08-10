@@ -43,7 +43,7 @@ public class LaboratorioController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('laboratorio:read')")
     public ResponseEntity<LaboratorioResponse> buscarLaboratorioPorId(@PathVariable
-    String id) {
+    Long id) {
         LaboratorioResponse response = service.buscarLaboratorioPorId(id);
         return ResponseEntity.ok(response);
     }
@@ -79,7 +79,7 @@ public class LaboratorioController {
     @GetMapping("/{id}/remedios")
     @PreAuthorize("hasAuthority('laboratorio:read') and hasAuthority('remedio:read')")
     public ResponseEntity<PageResponse<RemedioResponse>> listarRemediosPorLaboratorio(@PathVariable
-    String id, @RequestParam(defaultValue = "0")
+    Long id, @RequestParam(defaultValue = "0")
     String page, @RequestParam(defaultValue = "10")
     String pageSize) {
         Pageable paginacao = Util.gerarPaginacao(page, pageSize, Sort.by("createdAt"));
@@ -132,7 +132,7 @@ public class LaboratorioController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('laboratorio:update')")
     public ResponseEntity<LaboratorioResponse> atualizarLaboratorio(@PathVariable
-    String id, @RequestBody
+    Long id, @RequestBody
     @Valid
     LaboratorioUpdateRequest requestDTO) {
         LaboratorioResponse response = service.atualizarLaboratorio(id, requestDTO);
@@ -148,7 +148,7 @@ public class LaboratorioController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('laboratorio:delete')")
     public ResponseEntity<Void> deletarLaboratorio(@PathVariable
-    String id) {
+    Long id) {
         service.deletarLaboratorio(id);
         return ResponseEntity.ok().build();
     }
@@ -162,7 +162,7 @@ public class LaboratorioController {
     @DeleteMapping("/lote")
     @PreAuthorize("hasAuthority('laboratorio:delete')")
     public ResponseEntity<Void> deletarLaboratorioEmLote(@RequestBody
-    List<String> ids) {
+    List<Long> ids) {
         service.deletarLaboratorioEmLote(ids);
         return ResponseEntity.ok().build();
     }

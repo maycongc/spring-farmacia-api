@@ -5,10 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
-import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -51,11 +50,11 @@ class RemedioServiceImplTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    private static final UUID LAB_ID_FIXO = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final Long LAB_ID_FIXO = 11111111L;
 
     private static Remedio criarRemedioCompleto() {
         Remedio remedio = new Remedio();
-        remedio.setId(UUID.randomUUID());
+        remedio.setId(1L);
         remedio.setNome("Dipirona");
         remedio.setVia(Via.ORAL);
         remedio.setLote("L123");
@@ -69,7 +68,7 @@ class RemedioServiceImplTest {
     }
 
     private static RemedioRequest criarRemedioCreateRequest() {
-        EntidadeIdRequest laboratorio = new EntidadeIdRequest(LAB_ID_FIXO.toString());
+        EntidadeIdRequest laboratorio = new EntidadeIdRequest(LAB_ID_FIXO);
         return new RemedioRequest("Dipirona", Via.ORAL, "L123", 10, LocalDate.now().plusDays(10), laboratorio);
     }
 
@@ -84,11 +83,11 @@ class RemedioServiceImplTest {
         when(laboratorioRepository.findById(laboratorio.getId())).thenReturn(Optional.of(laboratorio));
         when(mapper.toEntity(any(RemedioRequest.class))).thenReturn(remedioSalvo);
         when(repository.save(any(Remedio.class))).thenReturn(remedioSalvo);
-        when(mapper.toResponse(any(Remedio.class))).thenReturn(new RemedioResponse(remedioSalvo.getId().toString(),
-                remedioSalvo.getNome(), remedioSalvo.getVia(), remedioSalvo.getValidade(),
-                new LaboratorioResumoResponse(remedioSalvo.getLaboratorio().getId().toString(),
-                        remedioSalvo.getLaboratorio().getNome()),
-                now, now));
+        when(mapper.toResponse(any(Remedio.class)))
+                .thenReturn(new RemedioResponse(remedioSalvo.getId(), remedioSalvo.getNome(), remedioSalvo.getVia(),
+                        remedioSalvo.getValidade(), new LaboratorioResumoResponse(remedioSalvo.getLaboratorio().getId(),
+                                remedioSalvo.getLaboratorio().getNome()),
+                        now, now));
 
         RemedioResponse response = remedioService.cadastrarRemedio(request);
 
@@ -111,9 +110,9 @@ class RemedioServiceImplTest {
 
         LocalDateTime now = LocalDateTime.now();
         when(repository.findAll(any(Pageable.class))).thenReturn(page);
-        when(mapper.toResponse(any(Remedio.class))).thenReturn(new RemedioResponse(remedio.getId().toString(),
-                remedio.getNome(), remedio.getVia(), remedio.getValidade(), new LaboratorioResumoResponse(
-                        remedio.getLaboratorio().getId().toString(), remedio.getLaboratorio().getNome()),
+        when(mapper.toResponse(any(Remedio.class))).thenReturn(new RemedioResponse(remedio.getId(), remedio.getNome(),
+                remedio.getVia(), remedio.getValidade(),
+                new LaboratorioResumoResponse(remedio.getLaboratorio().getId(), remedio.getLaboratorio().getNome()),
                 now, now));
 
         PageResponse<RemedioResponse> response = remedioService.listarRemedios(Pageable.unpaged());

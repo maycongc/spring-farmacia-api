@@ -1,7 +1,5 @@
 package br.com.projeto.spring.service.impl;
 
-import java.util.UUID;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,10 +41,9 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
-    public UsuarioResponse buscarUsuarioPorId(String id) {
+    public UsuarioResponse buscarUsuarioPorId(Long id) {
 
-        UUID uuid = UUID.fromString(id);
-        Usuario usuario = repository.findById(uuid)
+        Usuario usuario = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO));
 
         return mapper.toResponse(usuario);
@@ -60,10 +57,9 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional
-    public UsuarioResponse atualizarUsuario(String id, UsuarioUpdateRequest request) {
+    public UsuarioResponse atualizarUsuario(Long id, UsuarioUpdateRequest request) {
 
-        UUID uuid = UUID.fromString(id);
-        Usuario usuarioBanco = repository.findById(uuid)
+        Usuario usuarioBanco = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO));
 
         Usuario usuarioAtualizado = mapper.copy(usuarioBanco);
@@ -78,13 +74,25 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional
-    public void deletarUsuario(String id) {
+    public void deletarUsuario(Long id) {
 
-        UUID uuid = UUID.fromString(id);
-        Usuario usuario = repository.findById(uuid)
+        Usuario usuario = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO));
 
         repository.delete(usuario);
+    }
+
+    @Override
+    @Transactional
+    public UsuarioResponse atualizarSenhaUsuario(Long id, String novaSenha) {
+
+        Usuario usuario = repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO));
+
+        usuario.setSenha(passwordEncoder.encode(novaSenha));
+        repository.save(usuario);
+
+        return mapper.toResponse(usuario);
     }
 
 }

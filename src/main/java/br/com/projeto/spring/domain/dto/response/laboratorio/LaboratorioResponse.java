@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record LaboratorioResponse(
 
-        String id,
+        Long id,
 
         String nome,
 

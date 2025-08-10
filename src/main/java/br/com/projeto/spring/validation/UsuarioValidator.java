@@ -94,10 +94,10 @@ public class UsuarioValidator extends BaseValidator<Usuario> {
 
     private void validarPermissaoCriarTornarAdmin(Usuario usuario, Authentication auth) throws AccessDeniedException {
 
-        if (Util.preenchido(usuario.isAdmin() && usuario.isAdmin())) {
+        if (Util.preenchido(usuario.isAdmin()) && usuario.isAdmin()) {
 
-            boolean temPermissao = auth.getAuthorities().stream().anyMatch(
-                    a -> "usuario:create:admin".equals(a.getAuthority()) || "ROLE_ADMIN".equals(a.getAuthority()));
+            boolean temPermissao =
+                    auth.getAuthorities().stream().anyMatch(a -> "usuario:create:admin".equals(a.getAuthority()));
 
             if (!temPermissao) {
                 throw new AccessDeniedException(ValidationMessagesKeys.AUTORIZACAO_NAO_PODE_CRIAR_ADMIN);

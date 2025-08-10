@@ -55,7 +55,7 @@ public class UsuarioMapper {
 
         return new UsuarioResponse(
 
-                usuario.getId().toString(),
+                usuario.getId(),
 
                 usuario.getUsername(),
 

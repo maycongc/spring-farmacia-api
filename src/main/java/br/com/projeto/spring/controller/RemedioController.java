@@ -43,7 +43,7 @@ public class RemedioController {
     public ResponseEntity<RemedioResponse> buscarRemedioPorId(
 
             @PathVariable
-            String id) {
+            Long id) {
 
         RemedioResponse remedioResponse = service.buscarRemedioPorId(id);
         return ResponseEntity.ok(remedioResponse);
@@ -123,27 +123,19 @@ public class RemedioController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('remedio:update')")
-    public ResponseEntity<RemedioResponse> atualizarRemedio(
-
-            @PathVariable
-            String id,
-
-            @RequestBody
-            RemedioRequest request) {
-
+    public ResponseEntity<RemedioResponse> atualizarRemedio(@PathVariable
+    Long id, @RequestBody
+    @Valid
+    RemedioRequest request) {
         RemedioResponse remedioResponse = service.atualizarRemedio(id, request);
-
         return ResponseEntity.ok().body(remedioResponse);
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('remedio:delete')")
-    public ResponseEntity<Void> deletarRemedio(
-
-            @PathVariable
-            String id) {
-
+    public ResponseEntity<Void> deletarRemedio(@PathVariable
+    Long id) {
         service.deletarRemedio(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

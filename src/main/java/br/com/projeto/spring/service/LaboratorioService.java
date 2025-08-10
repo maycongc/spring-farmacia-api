@@ -24,7 +24,7 @@ public interface LaboratorioService {
      * @return LaboratorioResponse com os dados do laboratório
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
-    LaboratorioResponse buscarLaboratorioPorId(String id);
+    LaboratorioResponse buscarLaboratorioPorId(Long id);
 
     /**
      * Lista todos os laboratórios de forma paginada.
@@ -41,7 +41,7 @@ public interface LaboratorioService {
      * @param paginacao informações de paginação
      * @return PageResponse contendo a lista de remédios do laboratório
      */
-    PageResponse<RemedioResponse> listarRemediosPorLaboratorio(String id, Pageable paginacao);
+    PageResponse<RemedioResponse> listarRemediosPorLaboratorio(Long id, Pageable paginacao);
 
     /**
      * Cria um novo laboratório.
@@ -70,7 +70,7 @@ public interface LaboratorioService {
      * @return LaboratorioResponse com os dados atualizados
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
-    LaboratorioResponse atualizarLaboratorio(String id, LaboratorioUpdateRequest request)
+    LaboratorioResponse atualizarLaboratorio(Long id, LaboratorioUpdateRequest request)
             throws ResourceNotFoundException;
 
     /**
@@ -81,7 +81,7 @@ public interface LaboratorioService {
      * @throws EntityInUseException se o laboratório possuir entidades relacionadas e não puder ser
      *         excluído
      */
-    void deletarLaboratorio(String id) throws ResourceNotFoundException, EntityInUseException;
+    void deletarLaboratorio(Long id) throws ResourceNotFoundException, EntityInUseException;
 
     /**
      * Deleta vários laboratórios em lote.
@@ -91,5 +91,5 @@ public interface LaboratorioService {
      * @throws EntityInUseException se algum laboratório possuir entidades relacionadas e não puder ser
      *         excluído
      */
-    void deletarLaboratorioEmLote(List<String> ids) throws ResourceNotFoundException, EntityInUseException;
+    void deletarLaboratorioEmLote(List<Long> ids) throws ResourceNotFoundException, EntityInUseException;
 }

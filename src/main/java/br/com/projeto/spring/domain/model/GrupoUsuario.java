@@ -6,32 +6,21 @@ import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.EqualsAndHashCode.Include;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "grupoUsuario")
 @Data
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class GrupoUsuario {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Include
-    @PositiveOrZero(message = ValidationMessagesKeys.GENERICO_POSITIVO_OU_ZERO)
-    private Long id;
+public class GrupoUsuario extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     @NotBlank(message = ValidationMessagesKeys.GENERICO_OBRIGATORIO)

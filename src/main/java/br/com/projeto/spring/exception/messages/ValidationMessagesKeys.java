@@ -22,7 +22,6 @@ public class ValidationMessagesKeys {
     public static final String GENERICO_POSITIVO_OU_ZERO = "validacao.positivo_ou_zero";
     public static final String GENERICO_EMAIL_INVALIDO = "validacao.email.invalido";
     public static final String GENERICO_TELEFONE_INVALIDO = "validacao.telefone.invalido";
-    public static final String GENERICO_UUID_PATTERN = "validacao.uuid.pattern";
     public static final String GENERICO_CPF_INVALIDO = "validacao.cpf.invalido";
     public static final String GENERICO_UF_INVALIDO = "validacao.uf.invalido";
 

@@ -26,7 +26,7 @@ public class LaboratorioMapper {
     public LaboratorioResponse toResponse(Laboratorio laboratorio) {
         return new LaboratorioResponse(
 
-                laboratorio.getId().toString(),
+                laboratorio.getId(),
 
                 laboratorio.getNome(),
 

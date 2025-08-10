@@ -36,7 +36,7 @@ public interface RemedioService {
      * @return DTO de resposta do remédio.
      * @throws ResourceNotFoundException se o remédio não for encontrado.
      */
-    RemedioResponse buscarRemedioPorId(String id) throws ResourceNotFoundException;
+    RemedioResponse buscarRemedioPorId(Long id) throws ResourceNotFoundException;
 
     /**
      * Lista todos os remédios com paginação.
@@ -54,7 +54,7 @@ public interface RemedioService {
      * @return DTO de resposta do remédio atualizado.
      * @throws ResourceNotFoundException se o remédio ou laboratório não for encontrado.
      */
-    RemedioResponse atualizarRemedio(String id, RemedioRequest remedioRequest) throws ResourceNotFoundException;
+    RemedioResponse atualizarRemedio(Long id, RemedioRequest remedioRequest) throws ResourceNotFoundException;
 
     /**
      * Remove um remédio pelo seu ID.
@@ -62,5 +62,5 @@ public interface RemedioService {
      * @param id ID do remédio a ser removido.
      * @throws ResourceNotFoundException se o remédio não for encontrado.
      */
-    void deletarRemedio(String id) throws ResourceNotFoundException;
+    void deletarRemedio(Long id) throws ResourceNotFoundException;
 }

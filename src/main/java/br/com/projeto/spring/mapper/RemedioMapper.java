@@ -1,7 +1,5 @@
 package br.com.projeto.spring.mapper;
 
-import java.util.UUID;
-
 import org.springframework.stereotype.Component;
 
 import br.com.projeto.spring.domain.dto.request.remedio.RemedioRequest;
@@ -24,8 +22,8 @@ public class RemedioMapper {
         remedio.setQuantidade(request.quantidade());
         remedio.setValidade(request.validade());
 
-        UUID uuid = UUID.fromString(request.laboratorio().id());
-        remedio.setLaboratorio(new Laboratorio(uuid));
+        Long id = request.laboratorio().id();
+        remedio.setLaboratorio(new Laboratorio(id));
 
         return remedio;
     }
@@ -33,7 +31,7 @@ public class RemedioMapper {
     public RemedioResponse toResponse(Remedio remedio) {
         return new RemedioResponse(
 
-                remedio.getId().toString(),
+                remedio.getId(),
 
                 remedio.getNome(),
 
@@ -43,7 +41,7 @@ public class RemedioMapper {
 
                 new LaboratorioResumoResponse(
 
-                        remedio.getLaboratorio().getId().toString(),
+                        remedio.getLaboratorio().getId(),
 
                         remedio.getLaboratorio().getNome()),
 
@@ -55,6 +53,8 @@ public class RemedioMapper {
     }
 
     public void updateEntity(Remedio remedio, RemedioRequest request, Laboratorio laboratorio) {
+        if (request == null)
+            return;
 
         if (Util.preenchido(request.nome())) {
             remedio.setNome(request.nome());
@@ -76,12 +76,12 @@ public class RemedioMapper {
             remedio.setValidade(request.validade());
         }
 
-        if (Util.preenchido(() -> request.laboratorio().id()) && Util.preenchido(laboratorio)) {
+        if (Util.preenchido(() -> request.laboratorio().id())) {
+
+            Long laboratorioAtualId = remedio.getLaboratorio().getId();
+            Long novoLaboratorioId = request.laboratorio().id();
 
             // Atualiza o laboratório apenas se o ID for diferente do atual
-            String laboratorioAtualId = remedio.getLaboratorio().getId().toString();
-            String novoLaboratorioId = request.laboratorio().id();
-
             if (!novoLaboratorioId.equals(laboratorioAtualId)) {
                 remedio.setLaboratorio(laboratorio);
             }

@@ -5,30 +5,19 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.EqualsAndHashCode.Include;
 import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "permissao")
 @Data
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-public class Permissao {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Include
-    @PositiveOrZero(message = ValidationMessagesKeys.GENERICO_POSITIVO_OU_ZERO)
-    private Long id;
+public class Permissao extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     @NotBlank(message = ValidationMessagesKeys.GENERICO_OBRIGATORIO)

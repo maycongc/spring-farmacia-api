@@ -7,7 +7,7 @@ import br.com.projeto.spring.domain.model.Via;
 
 public record RemedioResponse(
 
-        String id,
+        Long id,
 
         String nome,
 

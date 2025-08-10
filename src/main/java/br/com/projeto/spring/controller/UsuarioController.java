@@ -1,14 +1,11 @@
 package br.com.projeto.spring.controller;
 
-import java.util.List;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -49,7 +46,7 @@ public class UsuarioController {
     public ResponseEntity<UsuarioResponse> buscarUsuarioPorId(
 
             @PathVariable
-            String id) {
+            Long id) {
 
         return ResponseEntity.ok(service.buscarUsuarioPorId(id));
     }
@@ -75,11 +72,11 @@ public class UsuarioController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('usuario:update') or #id == authentication.name")
+    @PreAuthorize("hasAuthority('usuario:update') or @usuarioSecurity.canSelfUpdate(#id)")
     public ResponseEntity<UsuarioResponse> atualizarUsuario(
 
             @PathVariable
-            String id,
+            Long id,
 
             @RequestBody
             @Valid
@@ -91,13 +88,10 @@ public class UsuarioController {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('usuario:delete')")
-    public ResponseEntity<Void> deletarUsuario(
-
-            @PathVariable
-            String id) {
-
+    public ResponseEntity<Void> deletarUsuario(@PathVariable
+    Long id) {
         service.deletarUsuario(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     // @PatchMapping("/{id}/permissoes")
@@ -105,7 +99,7 @@ public class UsuarioController {
     // public ResponseEntity<UsuarioResponse> atualizarPermissoesUsuario(
 
     // @PathVariable
-    // String id,
+    // Long id,
 
     // @RequestBody
     // @Valid

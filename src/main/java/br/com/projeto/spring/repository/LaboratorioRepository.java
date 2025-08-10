@@ -1,7 +1,6 @@
 package br.com.projeto.spring.repository;
 
 import java.util.Optional;
-import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -11,7 +10,7 @@ import br.com.projeto.spring.domain.model.Laboratorio;
  * Repositório JPA para a entidade Laboratorio. Fornece métodos para operações de persistência e
  * consultas customizadas.
  */
-public interface LaboratorioRepository extends JpaRepository<Laboratorio, UUID> {
+public interface LaboratorioRepository extends JpaRepository<Laboratorio, Long> {
 
     /**
      * Busca um laboratório pelo e-mail.
@@ -35,5 +34,5 @@ public interface LaboratorioRepository extends JpaRepository<Laboratorio, UUID> 
      * @param id identificador do laboratório
      * @return true se possuir remédios, false caso contrário
      */
-    boolean existsByIdAndRemediosIsNotEmpty(UUID id);
+    boolean existsByIdAndRemediosIsNotEmpty(Long id);
 }

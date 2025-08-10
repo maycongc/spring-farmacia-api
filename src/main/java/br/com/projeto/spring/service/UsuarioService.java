@@ -1,7 +1,5 @@
 package br.com.projeto.spring.service;
 
-import java.util.List;
-
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -16,22 +14,22 @@ public interface UsuarioService {
 
     UsuarioResponse cadastrarUsuario(UsuarioRequest request) throws AccessDeniedException;
 
-    UsuarioResponse buscarUsuarioPorId(String id)
+    UsuarioResponse buscarUsuarioPorId(Long id)
             throws AuthenticationException, AccessDeniedException, ResourceNotFoundException;
 
     PageResponse<UsuarioResponse> listarUsuarios(Pageable paginacao);
 
-    UsuarioResponse atualizarUsuario(String id, UsuarioUpdateRequest request)
+    UsuarioResponse atualizarUsuario(Long id, UsuarioUpdateRequest request)
             throws AuthenticationException, AccessDeniedException, ResourceNotFoundException;
 
-    void deletarUsuario(String id) throws AuthenticationException, AccessDeniedException, ResourceNotFoundException;
+    void deletarUsuario(Long id) throws AuthenticationException, AccessDeniedException, ResourceNotFoundException;
 
-    // UsuarioResponse atualizarPermissoesUsuario(String id, List<Long> permissoes) throws
+    // UsuarioResponse atualizarPermissoesUsuario(Long id, List<Long> permissoes) throws
     // ResourceNotFoundException;
 
-    // UsuarioResponse atualizarGruposDeUsuario(String id, List<Long> grupos) throws
+    // UsuarioResponse atualizarGruposDeUsuario(Long id, List<Long> grupos) throws
     // ResourceNotFoundException;
 
-    // UsuarioResponse atualizarSenhaUsuario(String id, String novaSenha) throws
-    // ResourceNotFoundException;
+    UsuarioResponse atualizarSenhaUsuario(Long id, String novaSenha)
+            throws AuthenticationException, AccessDeniedException, ResourceNotFoundException;
 }
