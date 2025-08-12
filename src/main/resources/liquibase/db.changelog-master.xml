@@ -1,61 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
-        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.0.xsd">
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
 
-    <!-- ChangeSet para criar tabelas laboratorio e remedio -->
-    <changeSet id="1" author="mayco">
-        <sql>
-            CREATE TABLE laboratorio (
-                id UUID NOT NULL PRIMARY KEY,
-                nome VARCHAR(100) NOT NULL,
-                endereco VARCHAR(200),
-                telefone VARCHAR(20),
-                email VARCHAR(100),
-                createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                UNIQUE (email)
-            );
-
-            CREATE TABLE remedio (
-                id UUID NOT NULL PRIMARY KEY,
-                nome VARCHAR(100) NOT NULL,
-                via VARCHAR(30) NOT NULL,
-                lote VARCHAR(50),
-                quantidade INT NOT NULL,
-                validade DATE,
-                laboratorio_id UUID NOT NULL,
-                createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (laboratorio_id) REFERENCES laboratorio(id)
-                    ON DELETE RESTRICT
-                    ON UPDATE CASCADE
-            );
-        </sql>
-    </changeSet>
-
-    <!-- ChangeSet para criar tabela usuario -->
-    <changeSet id="2" author="mayco">
-        <sql>
-            CREATE TABLE usuario (
-                id UUID NOT NULL PRIMARY KEY,
-                username VARCHAR(100) NOT NULL UNIQUE,
-                senha VARCHAR(255) NOT NULL,
-                nome VARCHAR(255) NOT NULL,
-                email VARCHAR(60) NOT NULL,
-                cpf VARCHAR(11) NOT NULL,
-                dataNascimento VARCHAR(20) NOT NULL,
-                telefone VARCHAR(20),
-                cep VARCHAR(20),
-                endereco VARCHAR(255),
-                complemento VARCHAR(255),
-                cidade VARCHAR(100),
-                uf VARCHAR(2),
-                isAdmin BOOLEAN NOT NULL,
-                createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
-        </sql>
-    </changeSet>
+    <include file="./V1__create-tables-remedio-laboratorio.xml"/>
+    <include file="./V2__create-table-usuarios.xml"/>
+    <include file="./V3__create-tables-authorization.xml"/>
+    <include file="./V4__insert_permissoes.xml"/>
+    <include file="./V5__insert_grupos.xml"/>
+    <include file="./V6__insert_grupo_permissao.xml"/>
+    <include file="./V7__insert_admin.xml"/>
+    <include file="./V8__populating-laboratorio-remedio.xml"/>
 
 </databaseChangeLog>

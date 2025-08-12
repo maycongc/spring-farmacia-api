@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+    <changeSet id="12" author="auto">
+        <insert tableName="usuario">
+            <column name="username" value="admin"/>
+            <column name="senha" value="$argon2id$v=19$m=16384,t=2,p=1$BX5mjXPdS8R+9BjXbGOfwQ$DmArtAeuxd+It3xU0q2OXzLM04489vgoiCQDz1AeyUk"/>
+            <column name="nome" value="Administrador"/>
+            <column name="email" value="admin@exemplo.com"/>
+            <column name="cpf" value="12345678901"/>
+            <column name="dataNascimento" value="1990-01-01"/>
+            <column name="telefone" value="11999999999"/>
+            <column name="endereco" value="Rua Exemplo, 123"/>
+            <column name="complemento" value="Sala 1"/>
+            <column name="cidade" value="São Paulo"/>
+            <column name="uf" value="SP"/>
+            <column name="cep" value="01001000"/>
+            <column name="isAdmin" value="true"/>
+            <column name="createdAt" valueDate="NOW()"/>
+            <column name="updatedAt" valueDate="NOW()"/>
+        </insert>
+        <sql>
+            INSERT INTO grupoUsuario_permissao (grupoUsuario_id, permissao_id)
+            SELECT g.id, p.id FROM grupoUsuario g, permissao p WHERE g.nome = 'ADMIN';
+            INSERT INTO usuario_grupoUsuario (usuario_id, grupoUsuario_id)
+            SELECT u.id, g.id FROM usuario u, grupoUsuario g WHERE u.username = 'admin' AND g.nome = 'ADMIN';
+        </sql>
+    </changeSet>
+</databaseChangeLog>

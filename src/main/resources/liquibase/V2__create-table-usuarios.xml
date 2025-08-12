@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+    <changeSet id="3" author="auto">
+        <createTable tableName="usuario">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="senha" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nome" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="email" type="VARCHAR(60)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cpf" type="VARCHAR(11)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="dataNascimento" type="VARCHAR(20)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="telefone" type="VARCHAR(20)"/>
+            <column name="cep" type="VARCHAR(20)"/>
+            <column name="endereco" type="VARCHAR(255)"/>
+            <column name="complemento" type="VARCHAR(255)"/>
+            <column name="cidade" type="VARCHAR(100)"/>
+            <column name="uf" type="VARCHAR(2)"/>
+            <column name="isAdmin" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="createdAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updatedAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+    <changeSet id="1" author="auto">
+        <createTable tableName="laboratorio">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nome" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="endereco" type="VARCHAR(200)"/>
+            <column name="telefone" type="VARCHAR(20)"/>
+            <column name="email" type="VARCHAR(100)"/>
+            <column name="createdAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updatedAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addUniqueConstraint tableName="laboratorio" columnNames="email" constraintName="uq_email"/>
+    </changeSet>
+
+    <changeSet id="2" author="auto">
+        <createTable tableName="remedio">
+            <column name="id" type="BIGSERIAL">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="nome" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="via" type="VARCHAR(30)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="lote" type="VARCHAR(50)"/>
+            <column name="quantidade" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="validade" type="DATE"/>
+            <column name="laboratorio_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="createdAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updatedAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="remedio"
+                                baseColumnNames="laboratorio_id"
+                                referencedTableName="laboratorio"
+                                referencedColumnNames="id"
+                                onDelete="restrict"
+                                onUpdate="cascade"
+                                constraintName="fk_remedio_laboratorio"/>
+    </changeSet>
+</databaseChangeLog>

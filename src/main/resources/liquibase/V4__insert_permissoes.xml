@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
+
+    <changeSet id="9" author="auto">
+        <insert tableName="permissao">
+            <column name="key" value="remedio:read"/>
+            <column name="nome" value="Visualizar remédios"/>
+            <column name="descricao" value="Permite visualizar remédios"/>
+            <column name="categoria" value="REMEDIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="remedio:create"/>
+            <column name="nome" value="Cadastrar remédio"/>
+            <column name="descricao" value="Permite cadastrar novos remédios"/>
+            <column name="categoria" value="REMEDIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="remedio:update"/>
+            <column name="nome" value="Atualizar remédio"/>
+            <column name="descricao" value="Permite atualizar dados de remédios"/>
+            <column name="categoria" value="REMEDIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="remedio:delete"/>
+            <column name="nome" value="Deletar remédio"/>
+            <column name="descricao" value="Permite deletar remédios"/>
+            <column name="categoria" value="REMEDIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="laboratorio:read"/>
+            <column name="nome" value="Visualizar laboratórios"/>
+            <column name="descricao" value="Permite visualizar laboratórios"/>
+            <column name="categoria" value="LABORATORIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="laboratorio:create"/>
+            <column name="nome" value="Cadastrar laboratório"/>
+            <column name="descricao" value="Permite cadastrar laboratórios"/>
+            <column name="categoria" value="LABORATORIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="laboratorio:update"/>
+            <column name="nome" value="Atualizar laboratório"/>
+            <column name="descricao" value="Permite atualizar dados de laboratórios"/>
+            <column name="categoria" value="LABORATORIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="laboratorio:delete"/>
+            <column name="nome" value="Deletar laboratório"/>
+            <column name="descricao" value="Permite deletar laboratórios"/>
+            <column name="categoria" value="LABORATORIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="usuario:read"/>
+            <column name="nome" value="Visualizar usuários"/>
+            <column name="descricao" value="Permite visualizar usuários"/>
+            <column name="categoria" value="USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="usuario:create"/>
+            <column name="nome" value="Cadastrar usuário"/>
+            <column name="descricao" value="Permite cadastrar usuários"/>
+            <column name="categoria" value="USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="usuario:create:admin"/>
+            <column name="nome" value="Cadastrar usuários admin"/>
+            <column name="descricao" value="Permite cadastrar usuários como admin"/>
+            <column name="categoria" value="USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="usuario:update"/>
+            <column name="nome" value="Atualizar usuário"/>
+            <column name="descricao" value="Permite atualizar usuários"/>
+            <column name="categoria" value="USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="usuario:delete"/>
+            <column name="nome" value="Deletar usuário"/>
+            <column name="descricao" value="Permite deletar usuários"/>
+            <column name="categoria" value="USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="grupo:create"/>
+            <column name="nome" value="Cadastrar grupo de usuários"/>
+            <column name="descricao" value="Permite cadastrar grupos de usuários"/>
+            <column name="categoria" value="GRUPOS_USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="grupo:update"/>
+            <column name="nome" value="Atualizar grupo de usuários"/>
+            <column name="descricao" value="Permite atualizar grupos de usuários"/>
+            <column name="categoria" value="GRUPOS_USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="grupo:delete"/>
+            <column name="nome" value="Deletar grupo de usuários"/>
+            <column name="descricao" value="Permite deletar grupos de usuários"/>
+            <column name="categoria" value="GRUPOS_USUARIOS"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="permissao:read"/>
+            <column name="nome" value="Visualizar permissões"/>
+            <column name="descricao" value="Permite visualizar permissões do sistema"/>
+            <column name="categoria" value="PERMISSOES"/>
+        </insert>
+        <insert tableName="permissao">
+            <column name="key" value="permissao:manage"/>
+            <column name="nome" value="Gerenciar permissões"/>
+            <column name="descricao" value="Permite gerenciar permissões dos usuários e grupos de usuários"/>
+            <column name="categoria" value="PERMISSOES"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>
