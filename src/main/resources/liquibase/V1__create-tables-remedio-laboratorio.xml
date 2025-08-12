@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
 
     <changeSet id="1" author="auto">
@@ -52,12 +50,6 @@
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addForeignKeyConstraint baseTableName="remedio"
-                                baseColumnNames="laboratorio_id"
-                                referencedTableName="laboratorio"
-                                referencedColumnNames="id"
-                                onDelete="restrict"
-                                onUpdate="cascade"
-                                constraintName="fk_remedio_laboratorio"/>
+        <addForeignKeyConstraint baseTableName="remedio" baseColumnNames="laboratorio_id" referencedTableName="laboratorio" referencedColumnNames="id" onDelete="RESTRICT" onUpdate="CASCADE" constraintName="fk_remedio_laboratorio"/>
     </changeSet>
 </databaseChangeLog>
