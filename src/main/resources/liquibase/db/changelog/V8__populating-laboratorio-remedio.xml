@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
 
     <changeSet id="13" author="auto">
         <!-- Laboratórios -->
         <sql>
-            INSERT INTO laboratorio (nome, endereco, telefone, email, createdAt, updatedAt) VALUES
+            INSERT INTO "laboratorio" (nome, endereco, telefone, email, "createdAt", "updatedAt") VALUES
             ('Laboratório Alpha', 'Rua A, 100', '11999990001', 'alpha@lab.com', NOW(), NOW()),
             ('Laboratório Beta', 'Rua B, 101', '11999990002', 'beta@lab.com', NOW(), NOW()),
             ('Laboratório Gama', 'Rua C, 102', '11999990003', 'gama@lab.com', NOW(), NOW()),
@@ -46,7 +44,7 @@
             ('Laboratório 34', 'Rua AI, 134', '11999990035', 'lab34@lab.com', NOW(), NOW()),
             ('Laboratório 35', 'Rua AJ, 135', '11999990036', 'lab35@lab.com', NOW(), NOW());
 
-            INSERT INTO remedio (nome, via, lote, quantidade, validade, laboratorio_id, createdAt, updatedAt) VALUES
+            INSERT INTO remedio (nome, via, lote, quantidade, validade, laboratorio_id, "createdAt", "updatedAt") VALUES
             ('Dipirona', 'ORAL', 'L001', 100, CURRENT_DATE + INTERVAL '180 days', 1, NOW(), NOW()),
             ('Paracetamol', 'ORAL', 'L002', 200, CURRENT_DATE + INTERVAL '365 days', 2, NOW(), NOW()),
             ('Ibuprofeno', 'ORAL', 'L003', 150, CURRENT_DATE + INTERVAL '90 days', 3, NOW(), NOW()),

@@ -1,19 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
 
     <changeSet id="11" author="auto">
         <sql>
-            INSERT INTO grupoUsuario_permissao (grupoUsuario_id, permissao_id)
+            INSERT INTO "grupoUsuario_permissao" ("grupoUsuario_id", permissao_id)
             SELECT 1, id FROM permissao WHERE key IN (
                 'remedio:read', 'remedio:create', 'remedio:update', 'remedio:delete',
                 'laboratorio:read', 'laboratorio:create', 'laboratorio:update', 'laboratorio:delete',
                 'usuario:read', 'usuario:create', 'usuario:update', 'usuario:delete'
             );
-            INSERT INTO grupoUsuario_permissao (grupoUsuario_id, permissao_id)
+            INSERT INTO "grupoUsuario_permissao" ("grupoUsuario_id", permissao_id)
             SELECT 2, id FROM permissao WHERE key IN (
                 'remedio:read', 'remedio:create', 'remedio:update', 'remedio:delete', 'laboratorio:read'
             );

@@ -11,6 +11,5 @@
     <include file="V6__insert_grupo_permissao.xml" relativeToChangelogFile="true"/>
     <include file="V7__insert_admin.xml" relativeToChangelogFile="true"/>
     <include file="V8__populating-laboratorio-remedio.xml" relativeToChangelogFile="true"/>
-    <include file="db/changelog/V1__create-tables-remedio-laboratorio.xml" relativeToChangelogFile="true"/>
 
 </databaseChangeLog>
