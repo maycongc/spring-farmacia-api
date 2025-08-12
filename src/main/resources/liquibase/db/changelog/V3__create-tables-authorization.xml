@@ -1,8 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<databaseChangeLog
-    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
 
     <changeSet id="4" author="auto">
@@ -20,17 +18,17 @@
             <column name="categoria" type="VARCHAR(50)">
                 <constraints nullable="false"/>
             </column>
-            <column name="createdAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="updatedAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
 
     <changeSet id="5" author="auto">
-        <createTable tableName="grupoUsuario">
+        <createTable tableName="grupo_usuario">
             <column name="id" type="BIGSERIAL">
                 <constraints primaryKey="true" nullable="false"/>
             </column>
@@ -38,41 +36,41 @@
                 <constraints nullable="false" unique="true"/>
             </column>
             <column name="descricao" type="VARCHAR(255)"/>
-            <column name="createdAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="updatedAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
     </changeSet>
 
     <changeSet id="6" author="auto">
-        <createTable tableName="grupoUsuario_permissao">
-            <column name="grupoUsuario_id" type="BIGINT">
+        <createTable tableName="grupo_usuario_permissao">
+            <column name="grupo_usuario_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
             <column name="permissao_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addPrimaryKey tableName="grupoUsuario_permissao" columnNames="grupoUsuario_id,permissao_id" constraintName="pk_grupoUsuario_permissao"/>
-        <addForeignKeyConstraint baseTableName="grupoUsuario_permissao" baseColumnNames="grupoUsuario_id" referencedTableName="grupoUsuario" referencedColumnNames="id" constraintName="fk_grupoUsuario_permissao_grupo"/>
-        <addForeignKeyConstraint baseTableName="grupoUsuario_permissao" baseColumnNames="permissao_id" referencedTableName="permissao" referencedColumnNames="id" constraintName="fk_grupoUsuario_permissao_permissao"/>
+        <addPrimaryKey tableName="grupo_usuario_permissao" columnNames="grupo_usuario_id,permissao_id" constraintName="pk_grupo_usuario_permissao"/>
+        <addForeignKeyConstraint baseTableName="grupo_usuario_permissao" baseColumnNames="grupo_usuario_id" referencedTableName="grupo_usuario" referencedColumnNames="id" constraintName="fk_grupo_usuario_permissao_grupo"/>
+        <addForeignKeyConstraint baseTableName="grupo_usuario_permissao" baseColumnNames="permissao_id" referencedTableName="permissao" referencedColumnNames="id" constraintName="fk_grupo_usuario_permissao_permissao"/>
     </changeSet>
 
     <changeSet id="7" author="auto">
-        <createTable tableName="usuario_grupoUsuario">
+        <createTable tableName="usuario_grupo_usuario">
             <column name="usuario_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="grupoUsuario_id" type="BIGINT">
+            <column name="grupo_usuario_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addPrimaryKey tableName="usuario_grupoUsuario" columnNames="usuario_id,grupoUsuario_id" constraintName="pk_usuario_grupoUsuario"/>
-        <addForeignKeyConstraint baseTableName="usuario_grupoUsuario" baseColumnNames="usuario_id" referencedTableName="usuario" referencedColumnNames="id" constraintName="fk_usuario_grupoUsuario_usuario"/>
-        <addForeignKeyConstraint baseTableName="usuario_grupoUsuario" baseColumnNames="grupoUsuario_id" referencedTableName="grupoUsuario" referencedColumnNames="id" constraintName="fk_usuario_grupoUsuario_grupo"/>
+        <addPrimaryKey tableName="usuario_grupo_usuario" columnNames="usuario_id,grupo_usuario_id" constraintName="pk_usuario_grupo_usuario"/>
+        <addForeignKeyConstraint baseTableName="usuario_grupo_usuario" baseColumnNames="usuario_id" referencedTableName="usuario" referencedColumnNames="id" constraintName="fk_usuario_grupo_usuario_usuario"/>
+        <addForeignKeyConstraint baseTableName="usuario_grupo_usuario" baseColumnNames="grupo_usuario_id" referencedTableName="grupo_usuario" referencedColumnNames="id" constraintName="fk_usuario_grupo_usuario_grupo"/>
     </changeSet>
 
     <changeSet id="8" author="auto">

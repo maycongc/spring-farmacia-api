@@ -16,7 +16,7 @@ import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "grupoUsuario")
+@Table(name = "grupo_usuario")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
@@ -29,7 +29,7 @@ public class GrupoUsuario extends BaseEntity {
     private String descricao;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "grupoUsuario_permissao", joinColumns = @JoinColumn(name = "grupoUsuario_id"),
+    @JoinTable(name = "grupo_usuario_permissao", joinColumns = @JoinColumn(name = "grupo_usuario_id"),
             inverseJoinColumns = @JoinColumn(name = "permissao_id"))
     private Set<Permissao> permissoes;
 }

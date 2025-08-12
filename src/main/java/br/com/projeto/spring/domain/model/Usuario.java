@@ -44,7 +44,7 @@ public class Usuario extends BaseEntity {
     @NotBlank(message = ValidationMessagesKeys.GENERICO_OBRIGATORIO)
     private String cpf;
 
-    @Column(nullable = false)
+    @Column(name = "data_nascimento", nullable = false)
     @NotBlank(message = ValidationMessagesKeys.GENERICO_OBRIGATORIO)
     private String dataNascimento;
 
@@ -55,11 +55,12 @@ public class Usuario extends BaseEntity {
     private String cidade;
     private String uf;
 
+    @Column(name = "is_admin")
     private boolean isAdmin;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "usuario_grupoUsuario", joinColumns = @JoinColumn(name = "usuario_id"),
-            inverseJoinColumns = @JoinColumn(name = "grupoUsuario_id"))
+    @JoinTable(name = "usuario_grupo_usuario", joinColumns = @JoinColumn(name = "usuario_id"),
+            inverseJoinColumns = @JoinColumn(name = "grupo_usuario_id"))
     private Set<GrupoUsuario> gruposUsuario;
 
     @ManyToMany(fetch = FetchType.LAZY)

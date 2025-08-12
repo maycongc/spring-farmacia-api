@@ -14,14 +14,14 @@
             <column name="endereco" type="VARCHAR(200)"/>
             <column name="telefone" type="VARCHAR(20)"/>
             <column name="email" type="VARCHAR(100)"/>
-            <column name="createdAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="updatedAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addUniqueConstraint tableName="laboratorio" columnNames="email" constraintName="uq_email"/>
+        <addUniqueConstraint tableName="laboratorio" columnNames="email" constraintName="uq_laboratorio_email"/>
     </changeSet>
 
     <changeSet id="2" author="auto">
@@ -43,13 +43,13 @@
             <column name="laboratorio_id" type="BIGINT">
                 <constraints nullable="false"/>
             </column>
-            <column name="createdAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
-            <column name="updatedAt" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
                 <constraints nullable="false"/>
             </column>
         </createTable>
-        <addForeignKeyConstraint baseTableName="remedio" baseColumnNames="laboratorio_id" referencedTableName="laboratorio" referencedColumnNames="id" onDelete="RESTRICT" onUpdate="CASCADE" constraintName="fk_remedio_laboratorio"/>
+        <addForeignKeyConstraint baseTableName="remedio" baseColumnNames="laboratorio_id" referencedTableName="laboratorio" referencedColumnNames="id" onDelete="RESTRICT" onUpdate="CASCADE" constraintName="fk_remedio_laboratorio_id"/>
     </changeSet>
 </databaseChangeLog>
