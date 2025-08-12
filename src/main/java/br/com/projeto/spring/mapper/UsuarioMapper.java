@@ -81,7 +81,9 @@ public class UsuarioMapper {
 
                 usuario.getCreatedAt(),
 
-                usuario.getUpdatedAt()
+                usuario.getUpdatedAt(),
+
+                usuario.isAdmin()
 
         );
     }

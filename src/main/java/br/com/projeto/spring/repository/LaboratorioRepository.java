@@ -34,5 +34,5 @@ public interface LaboratorioRepository extends JpaRepository<Laboratorio, Long> 
      * @param id identificador do laboratório
      * @return true se possuir remédios, false caso contrário
      */
-    boolean existsByIdAndRemediosIsNotEmpty(Long id);
+    Optional<Laboratorio> findByIdAndRemediosIsNotEmpty(Long id);
 }

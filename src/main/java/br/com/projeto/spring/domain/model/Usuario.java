@@ -57,12 +57,12 @@ public class Usuario extends BaseEntity {
 
     private boolean isAdmin;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "usuario_grupoUsuario", joinColumns = @JoinColumn(name = "usuario_id"),
             inverseJoinColumns = @JoinColumn(name = "grupoUsuario_id"))
     private Set<GrupoUsuario> gruposUsuario;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "usuario_permissao", joinColumns = @JoinColumn(name = "usuario_id"),
             inverseJoinColumns = @JoinColumn(name = "permissao_id"))
     private Set<Permissao> permissoes;

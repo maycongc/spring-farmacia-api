@@ -30,6 +30,8 @@ public record UsuarioResponse(
 
         LocalDateTime createdAt,
 
-        LocalDateTime updatedAt) {
+        LocalDateTime updatedAt,
 
-}
+        boolean isAdmin
+
+) {}

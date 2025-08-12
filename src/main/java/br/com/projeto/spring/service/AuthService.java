@@ -4,7 +4,7 @@ import org.springframework.security.core.AuthenticationException;
 
 import br.com.projeto.spring.domain.dto.request.LoginRequest;
 import br.com.projeto.spring.domain.dto.response.TokenResponse;
-import br.com.projeto.spring.domain.dto.response.usuario.UsuarioResponse;
+import br.com.projeto.spring.domain.dto.response.auth.AuthUsuarioResponse;
 import br.com.projeto.spring.exception.ResourceNotFoundException;
 
 public interface AuthService {
@@ -12,5 +12,5 @@ public interface AuthService {
 
     TokenResponse refreshToken(String refreshToken) throws AuthenticationException;
 
-    UsuarioResponse obterUsuarioAtual() throws ResourceNotFoundException;
+    AuthUsuarioResponse obterUsuarioAtual() throws ResourceNotFoundException;
 }

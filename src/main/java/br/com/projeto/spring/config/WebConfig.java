@@ -1,9 +1,9 @@
 package br.com.projeto.spring.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
+// ...existing code...
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.lang.NonNull;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
@@ -12,12 +12,18 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    @Autowired
     private LoggingInterceptor loggingInterceptor;
 
+    public WebConfig(LoggingInterceptor loggingInterceptor) {
+        this.loggingInterceptor = loggingInterceptor;
+    }
+
     @Override
-    public void addInterceptors(@NonNull
-    InterceptorRegistry registry) {
+    public void addInterceptors(
+
+            @NonNull
+            InterceptorRegistry registry) {
+
         registry.addInterceptor(loggingInterceptor).addPathPatterns("/**");
     }
 }

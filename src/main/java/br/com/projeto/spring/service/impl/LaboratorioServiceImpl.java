@@ -50,7 +50,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "laboratorio", key = "#id")
+    @Cacheable(cacheNames = "laboratorio", keyGenerator = "customKeyGenerator")
     public LaboratorioResponse buscarLaboratorioPorId(Long id) {
 
         Laboratorio laboratorio = repository.findById(id)
@@ -67,8 +67,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return PageResponse contendo a lista de laboratórios
      */
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "laboratorioPages",
-            key = "#pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort.toString()")
+    @Cacheable(cacheNames = "laboratorioPages", keyGenerator = "customKeyGenerator")
     public PageResponse<LaboratorioResponse> listarLaboratorios(Pageable pageable) {
 
         Page<Laboratorio> page = repository.findAll(pageable);
@@ -84,8 +83,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @return PageResponse contendo a lista de remédios do laboratório
      */
     @Transactional(readOnly = true)
-    @Cacheable(cacheNames = "laboratorioRemedios",
-            key = "#laboratorioId + ':' + #paginacao.pageNumber + ':' + #paginacao.pageSize + ':' + #paginacao.sort.toString()")
+    @Cacheable(cacheNames = "laboratorioRemedios", keyGenerator = "customKeyGenerator")
     public PageResponse<RemedioResponse> listarRemediosPorLaboratorio(Long laboratorioId, Pageable paginacao) {
 
         Page<Remedio> page = remedioRepository.findByLaboratorioId(laboratorioId, paginacao);
@@ -102,7 +100,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws IllegalArgumentException se houver erro de validação
      */
     @Caching(evict = { @CacheEvict(cacheNames = { "laboratorioPages", "laboratorioRemedios" }, allEntries = true) },
-            put = { @CachePut(cacheNames = "laboratorio", key = "#result.id()",
+            put = { @CachePut(cacheNames = "laboratorio", keyGenerator = "customKeyGenerator",
                     condition = "#result != null && #result.id() != null") })
     public LaboratorioResponse cadastrarLaboratorio(LaboratorioRequest request) throws IllegalArgumentException {
 
@@ -144,7 +142,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      */
     @CacheEvict(cacheNames = { "laboratorioPages", "laboratorioRemedios" }, allEntries = true)
-    @CachePut(cacheNames = "laboratorio", key = "#id")
+    @CachePut(cacheNames = "laboratorio", keyGenerator = "customKeyGenerator")
     public LaboratorioResponse atualizarLaboratorio(Long id, LaboratorioUpdateRequest request)
             throws ResourceNotFoundException {
 
@@ -167,7 +165,7 @@ public class LaboratorioServiceImpl implements LaboratorioService {
      * @throws ResourceNotFoundException se o laboratório não for encontrado
      * @throws EntityInUseException se não for possível excluir por possuir entidades relacionadas
      */
-    @Caching(evict = { @CacheEvict(cacheNames = "laboratorio", key = "#id"),
+    @Caching(evict = { @CacheEvict(cacheNames = "laboratorio", keyGenerator = "customKeyGenerator"),
             @CacheEvict(cacheNames = { "laboratorioPages", "laboratorioRemedios" }, allEntries = true) })
     public void deletarLaboratorio(Long id) throws ResourceNotFoundException, IllegalArgumentException {
 

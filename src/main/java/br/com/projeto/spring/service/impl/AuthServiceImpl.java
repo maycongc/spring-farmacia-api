@@ -1,5 +1,9 @@
 package br.com.projeto.spring.service.impl;
 
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -11,15 +15,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.dto.request.LoginRequest;
 import br.com.projeto.spring.domain.dto.response.TokenResponse;
-import br.com.projeto.spring.domain.dto.response.usuario.UsuarioResponse;
+import br.com.projeto.spring.domain.dto.response.auth.AuthUsuarioResponse;
 import br.com.projeto.spring.domain.model.Usuario;
 import br.com.projeto.spring.exception.ResourceNotFoundException;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
-import br.com.projeto.spring.mapper.UsuarioMapper;
+import br.com.projeto.spring.i18n.MessageResolver;
+import br.com.projeto.spring.mapper.AuthUsuarioMapper;
 import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.security.JwtUtil;
 import br.com.projeto.spring.service.AuthService;
-import br.com.projeto.spring.i18n.MessageResolver;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -27,8 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class AuthServiceImpl implements AuthService {
 
     private final UsuarioRepository usuarioRepository;
-    private final UsuarioMapper usuarioMapper;
-
+    private final AuthUsuarioMapper mapperAuthUsuario;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final MessageResolver messages;
@@ -71,15 +74,35 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(readOnly = true)
-    public UsuarioResponse obterUsuarioAtual() throws ResourceNotFoundException {
-
+    public AuthUsuarioResponse obterUsuarioAtual() throws ResourceNotFoundException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        Usuario usuario = usuarioRepository.findByUsername(username)
+        Usuario usuario = usuarioRepository.findByUsernameWithPermissoesAndGrupos(username)
                 .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO) {});
 
-        return usuarioMapper.toResponse(usuario);
+        List<String> permissoes = getPermissoesUsuario(usuario);
+
+        return mapperAuthUsuario.toResponse(usuario, permissoes);
+    }
+
+    // Método utilitário para agregar permissões do usuário e dos grupos
+    private static List<String> getPermissoesUsuario(Usuario usuario) {
+        Set<String> permissoes = new HashSet<>();
+        // Permissões dos grupos
+        if (usuario.getGruposUsuario() != null) {
+            usuario.getGruposUsuario().forEach(grupo -> {
+                if (grupo.getPermissoes() != null) {
+                    grupo.getPermissoes().forEach(p -> permissoes.add(p.getKey()));
+                }
+            });
+        }
+        // Permissões individuais
+        if (usuario.getPermissoes() != null) {
+            usuario.getPermissoes().forEach(p -> permissoes.add(p.getKey()));
+        }
+
+        return permissoes.stream().toList();
     }
 
 }

@@ -37,6 +37,8 @@ public class RemedioMapper {
 
                 remedio.getVia(),
 
+                remedio.getLote(),
+
                 remedio.getValidade(),
 
                 new LaboratorioResumoResponse(

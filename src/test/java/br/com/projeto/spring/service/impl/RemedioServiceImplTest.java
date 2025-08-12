@@ -83,11 +83,11 @@ class RemedioServiceImplTest {
         when(laboratorioRepository.findById(laboratorio.getId())).thenReturn(Optional.of(laboratorio));
         when(mapper.toEntity(any(RemedioRequest.class))).thenReturn(remedioSalvo);
         when(repository.save(any(Remedio.class))).thenReturn(remedioSalvo);
-        when(mapper.toResponse(any(Remedio.class)))
-                .thenReturn(new RemedioResponse(remedioSalvo.getId(), remedioSalvo.getNome(), remedioSalvo.getVia(),
-                        remedioSalvo.getValidade(), new LaboratorioResumoResponse(remedioSalvo.getLaboratorio().getId(),
-                                remedioSalvo.getLaboratorio().getNome()),
-                        now, now));
+        when(mapper.toResponse(any(Remedio.class))).thenReturn(new RemedioResponse(remedioSalvo.getId(),
+                remedioSalvo.getNome(), remedioSalvo.getVia(), remedioSalvo.getLote(), remedioSalvo.getValidade(),
+                new LaboratorioResumoResponse(remedioSalvo.getLaboratorio().getId(),
+                        remedioSalvo.getLaboratorio().getNome()),
+                now, now));
 
         RemedioResponse response = remedioService.cadastrarRemedio(request);
 
@@ -111,7 +111,7 @@ class RemedioServiceImplTest {
         LocalDateTime now = LocalDateTime.now();
         when(repository.findAll(any(Pageable.class))).thenReturn(page);
         when(mapper.toResponse(any(Remedio.class))).thenReturn(new RemedioResponse(remedio.getId(), remedio.getNome(),
-                remedio.getVia(), remedio.getValidade(),
+                remedio.getVia(), remedio.getLote(), remedio.getValidade(),
                 new LaboratorioResumoResponse(remedio.getLaboratorio().getId(), remedio.getLaboratorio().getNome()),
                 now, now));
 

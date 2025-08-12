@@ -42,8 +42,11 @@ public class LaboratorioController {
      */
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('laboratorio:read')")
-    public ResponseEntity<LaboratorioResponse> buscarLaboratorioPorId(@PathVariable
-    Long id) {
+    public ResponseEntity<LaboratorioResponse> buscarLaboratorioPorId(
+
+            @PathVariable
+            Long id) {
+
         LaboratorioResponse response = service.buscarLaboratorioPorId(id);
         return ResponseEntity.ok(response);
     }
@@ -57,14 +60,21 @@ public class LaboratorioController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('laboratorio:read')")
-    public ResponseEntity<PageResponse<LaboratorioResponse>> listarLaboratorios(@RequestParam(defaultValue = "0")
-    String page, @RequestParam(defaultValue = "10")
-    String pageSize) {
-        Pageable paginacao = Util.gerarPaginacao(page, pageSize, Sort.by("createdAt"));
+    public ResponseEntity<PageResponse<LaboratorioResponse>> listarLaboratorios(
+
+            @RequestParam(defaultValue = "0")
+            String page,
+
+            @RequestParam(defaultValue = "10")
+            String pageSize) {
+
+        Pageable paginacao = Util.gerarPaginacao(page, pageSize);
         PageResponse<LaboratorioResponse> response = service.listarLaboratorios(paginacao);
+
         if (Util.vazio(response.content())) {
             return ResponseEntity.noContent().build();
         }
+
         return ResponseEntity.ok(response);
     }
 
@@ -78,10 +88,17 @@ public class LaboratorioController {
      */
     @GetMapping("/{id}/remedios")
     @PreAuthorize("hasAuthority('laboratorio:read') and hasAuthority('remedio:read')")
-    public ResponseEntity<PageResponse<RemedioResponse>> listarRemediosPorLaboratorio(@PathVariable
-    Long id, @RequestParam(defaultValue = "0")
-    String page, @RequestParam(defaultValue = "10")
-    String pageSize) {
+    public ResponseEntity<PageResponse<RemedioResponse>> listarRemediosPorLaboratorio(
+
+            @PathVariable
+            Long id,
+
+            @RequestParam(defaultValue = "0")
+            String page,
+
+            @RequestParam(defaultValue = "10")
+            String pageSize) {
+
         Pageable paginacao = Util.gerarPaginacao(page, pageSize, Sort.by("createdAt"));
         PageResponse<RemedioResponse> response = service.listarRemediosPorLaboratorio(id, paginacao);
         if (Util.vazio(response.content())) {
@@ -98,9 +115,12 @@ public class LaboratorioController {
      */
     @PostMapping
     @PreAuthorize("hasAuthority('laboratorio:create')")
-    public ResponseEntity<LaboratorioResponse> cadastrarLaboratorio(@RequestBody
-    @Valid
-    LaboratorioRequest requestDTO) {
+    public ResponseEntity<LaboratorioResponse> cadastrarLaboratorio(
+
+            @RequestBody
+            @Valid
+            LaboratorioRequest requestDTO) {
+
         LaboratorioResponse response = service.cadastrarLaboratorio(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -113,8 +133,11 @@ public class LaboratorioController {
      */
     @PostMapping("/lote")
     @PreAuthorize("hasAuthority('laboratorio:create')")
-    public ResponseEntity<List<LaboratorioResponse>> cadastrarLaboratorioEmLote(@RequestBody
-    List<LaboratorioRequest> requestDTO) {
+    public ResponseEntity<List<LaboratorioResponse>> cadastrarLaboratorioEmLote(
+
+            @RequestBody
+            List<LaboratorioRequest> requestDTO) {
+
         if (requestDTO.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
@@ -131,10 +154,15 @@ public class LaboratorioController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasAuthority('laboratorio:update')")
-    public ResponseEntity<LaboratorioResponse> atualizarLaboratorio(@PathVariable
-    Long id, @RequestBody
-    @Valid
-    LaboratorioUpdateRequest requestDTO) {
+    public ResponseEntity<LaboratorioResponse> atualizarLaboratorio(
+
+            @PathVariable
+            Long id,
+
+            @RequestBody
+            @Valid
+            LaboratorioUpdateRequest requestDTO) {
+
         LaboratorioResponse response = service.atualizarLaboratorio(id, requestDTO);
         return ResponseEntity.ok().body(response);
     }
@@ -147,8 +175,11 @@ public class LaboratorioController {
      */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('laboratorio:delete')")
-    public ResponseEntity<Void> deletarLaboratorio(@PathVariable
-    Long id) {
+    public ResponseEntity<Void> deletarLaboratorio(
+
+            @PathVariable
+            Long id) {
+
         service.deletarLaboratorio(id);
         return ResponseEntity.ok().build();
     }
@@ -161,8 +192,11 @@ public class LaboratorioController {
      */
     @DeleteMapping("/lote")
     @PreAuthorize("hasAuthority('laboratorio:delete')")
-    public ResponseEntity<Void> deletarLaboratorioEmLote(@RequestBody
-    List<Long> ids) {
+    public ResponseEntity<Void> deletarLaboratorioEmLote(
+
+            @RequestBody
+            List<Long> ids) {
+
         service.deletarLaboratorioEmLote(ids);
         return ResponseEntity.ok().build();
     }

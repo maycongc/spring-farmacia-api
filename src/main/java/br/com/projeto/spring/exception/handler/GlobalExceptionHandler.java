@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -18,17 +19,17 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import br.com.projeto.spring.config.TraceIdFilter;
 import br.com.projeto.spring.exception.EntityInUseException;
 import br.com.projeto.spring.exception.ResourceNotFoundException;
 import br.com.projeto.spring.exception.ValidationException;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
-import br.com.projeto.spring.config.TraceIdFilter;
 import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.util.Util;
 
@@ -53,8 +54,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<Object> handleEntityInUseException(EntityInUseException ex) {
 
         String mensagemErro = messages.get(ex.getMessage());
+        Map<String, Set<String>> entityRelations = ex.getEntityRelations();
 
-        return buildErrorResponse(HttpStatus.CONFLICT, mensagemErro, null);
+        return buildErrorResponse(HttpStatus.CONFLICT, mensagemErro, entityRelations);
     }
 
     @ExceptionHandler(AuthenticationException.class)
@@ -187,7 +189,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return buildErrorResponse(HttpStatus.BAD_REQUEST, mensagemErro, null);
     }
 
-    private ResponseEntity<Object> buildErrorResponse(HttpStatus status, String message, Map<String, String> errors) {
+    private ResponseEntity<Object> buildErrorResponse(HttpStatus status, String message, Map<String, ?> errors) {
 
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("timestamp", OffsetDateTime.now(ZoneOffset.UTC));

@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import br.com.projeto.spring.domain.dto.request.LoginRequest;
 import br.com.projeto.spring.domain.dto.response.TokenResponse;
-import br.com.projeto.spring.domain.dto.response.usuario.UsuarioResponse;
+import br.com.projeto.spring.domain.dto.response.auth.AuthUsuarioResponse;
 import br.com.projeto.spring.service.AuthService;
 import br.com.projeto.spring.util.UtilCookie;
 import jakarta.validation.Valid;
@@ -51,9 +51,9 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UsuarioResponse> obterUsuarioAtual() {
+    public ResponseEntity<AuthUsuarioResponse> obterUsuarioAtual() {
 
-        UsuarioResponse usuario = service.obterUsuarioAtual();
-        return ResponseEntity.ok(usuario);
+        AuthUsuarioResponse response = service.obterUsuarioAtual();
+        return ResponseEntity.ok(response);
     }
 }

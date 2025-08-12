@@ -28,7 +28,7 @@ public class GrupoUsuario extends BaseEntity {
 
     private String descricao;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "grupoUsuario_permissao", joinColumns = @JoinColumn(name = "grupoUsuario_id"),
             inverseJoinColumns = @JoinColumn(name = "permissao_id"))
     private Set<Permissao> permissoes;

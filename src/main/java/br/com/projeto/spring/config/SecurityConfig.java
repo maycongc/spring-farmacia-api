@@ -1,6 +1,7 @@
 package br.com.projeto.spring.config;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.context.annotation.Bean;
@@ -21,14 +22,15 @@ import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
 
 import br.com.projeto.spring.domain.model.Usuario;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
+import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.security.JwtAuthenticationEntryPoint;
 import br.com.projeto.spring.security.JwtAuthenticationFilter;
 import br.com.projeto.spring.security.JwtUtil;
-import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.util.Util;
 
 /**
@@ -60,17 +62,14 @@ public class SecurityConfig {
     @Bean
     public UserDetailsService userDetailsService(UsuarioRepository usuarioRepository) {
         return username -> {
-
-            Usuario usuario = usuarioRepository.findByUsername(username)
+            Usuario usuario = usuarioRepository.findByUsernameWithPermissoesAndGrupos(username)
                     .orElseThrow(() -> new UsernameNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO));
 
             Set<String> authorities = new HashSet<>();
 
             // Permissões dos grupos
             if (Util.preenchido(usuario.getGruposUsuario())) {
-
                 usuario.getGruposUsuario().forEach(grupo -> {
-
                     if (Util.preenchido(grupo.getPermissoes())) {
                         grupo.getPermissoes().forEach(p -> authorities.add(p.getKey()));
                     }
@@ -94,20 +93,27 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(
+    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter,
+            CorsProperties corsProperties) throws Exception {
+        http.cors(cors -> cors.configurationSource(request -> {
+            var corsConfig = new CorsConfiguration();
 
-            HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+            corsConfig.setAllowedOrigins(corsProperties.getAllowedOrigins());
+            corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+            corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+            corsConfig.setAllowCredentials(true);
 
-        http.csrf(csrf -> csrf.disable())
+            return corsConfig;
+        })).csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
 
-                        // libera acesso a criação de usuários
-                        .requestMatchers(HttpMethod.POST, "/usuarios").permitAll()
+                        // libera acesso a registro e login de usuários
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/refresh").permitAll()
 
                         // libera acesso a autenticação e endpoints públicos
-                        .requestMatchers("/auth/**", "/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
 
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

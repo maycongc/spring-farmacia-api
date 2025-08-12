@@ -1,7 +1,9 @@
 package br.com.projeto.spring.validation;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -12,9 +14,9 @@ import br.com.projeto.spring.exception.EntityInUseException;
 import br.com.projeto.spring.exception.ResourceNotFoundException;
 import br.com.projeto.spring.exception.ValidationException;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
+import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.repository.LaboratorioRepository;
 import br.com.projeto.spring.util.Util;
-import br.com.projeto.spring.i18n.MessageResolver;
 import jakarta.validation.Validator;
 
 @Component
@@ -78,12 +80,12 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
     }
 
     public void validarExclusao(List<Laboratorio> laboratorios, List<Long> idsRequisitados) {
-
         if (Util.preenchido(idsRequisitados)) {
             validarLaboratoriosEncontrados(idsRequisitados, laboratorios);
         }
 
-        validarRemediosExistentes(laboratorios);
+        validarRemediosExistentesJson(laboratorios);
+
         // Adicione aqui outras validações de exclusão se necessário
     }
 
@@ -108,32 +110,31 @@ public class LaboratorioValidator extends BaseValidator<Laboratorio> {
         }
     }
 
-    private void validarRemediosExistentes(List<Laboratorio> laboratorios) throws EntityInUseException {
-        StringBuilder mensagemDetalhada = new StringBuilder();
+    public void validarRemediosExistentesJson(List<Laboratorio> laboratorios) {
+        Map<String, Set<String>> laboratoriosRemedios = new HashMap<>();
 
         for (Laboratorio laboratorio : laboratorios) {
-            boolean existeRemediosRelacionados = repository.existsByIdAndRemediosIsNotEmpty(laboratorio.getId());
 
-            if (existeRemediosRelacionados) {
+            Laboratorio laboratorioBanco = repository.findByIdAndRemediosIsNotEmpty(laboratorio.getId()).orElse(null);
 
-                String nomeLab = Util.preenchido(() -> laboratorio.getNome()) ? laboratorio.getNome()
-                        : laboratorio.getId().toString();
+            if (Util.preenchido(laboratorioBanco)) {
 
-                mensagemDetalhada.append("- ").append(nomeLab).append(":\n");
+                String nomeLab = laboratorio.getNome();
 
-                if (laboratorio.getRemedios() != null && !laboratorio.getRemedios().isEmpty()) {
-                    laboratorio.getRemedios().forEach(remedio -> {
-                        mensagemDetalhada.append("    • [").append(remedio.getId()).append("] ")
-                                .append(remedio.getNome()).append("\n");
+                Set<String> remediosSet = new HashSet<>();
+
+                if (Util.preenchido(laboratorioBanco.getRemedios())) {
+                    laboratorioBanco.getRemedios().forEach(remedio -> {
+                        remediosSet.add("[" + remedio.getId() + "] " + remedio.getNome());
                     });
                 }
+
+                laboratoriosRemedios.put(nomeLab, remediosSet);
             }
         }
 
-        if (mensagemDetalhada.length() > 0) {
-            String mensagem = messages.get(ValidationMessagesKeys.LABORATORIO_EXCLUSAO_REMEDIOS_EXISTENTES,
-                    mensagemDetalhada.toString().trim());
-            throw new EntityInUseException(mensagem);
+        if (!laboratoriosRemedios.isEmpty()) {
+            throw new EntityInUseException(laboratoriosRemedios);
         }
     }
 

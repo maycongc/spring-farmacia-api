@@ -13,6 +13,8 @@ public record RemedioResponse(
 
         Via via,
 
+        String lote,
+
         LocalDate validade,
 
         LaboratorioResumoResponse laboratorio,
