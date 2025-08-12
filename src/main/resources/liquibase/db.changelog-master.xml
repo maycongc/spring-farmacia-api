@@ -3,13 +3,13 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
     http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.4.xsd">
 
-    <include file="./V1__create-tables-remedio-laboratorio.xml"/>
-    <include file="./V2__create-table-usuarios.xml"/>
-    <include file="./V3__create-tables-authorization.xml"/>
-    <include file="./V4__insert_permissoes.xml"/>
-    <include file="./V5__insert_grupos.xml"/>
-    <include file="./V6__insert_grupo_permissao.xml"/>
-    <include file="./V7__insert_admin.xml"/>
-    <include file="./V8__populating-laboratorio-remedio.xml"/>
+    <include file="V1__create-tables-remedio-laboratorio.xml"/>
+    <include file="V2__create-table-usuarios.xml"/>
+    <include file="V3__create-tables-authorization.xml"/>
+    <include file="V4__insert_permissoes.xml"/>
+    <include file="V5__insert_grupos.xml"/>
+    <include file="V6__insert_grupo_permissao.xml"/>
+    <include file="V7__insert_admin.xml"/>
+    <include file="V8__populating-laboratorio-remedio.xml"/>
 
 </databaseChangeLog>
