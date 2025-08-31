@@ -22,8 +22,11 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByUsernameWithPermissoesAndGrupos(
 
             @Param("username")
-            String username
+            String username);
 
-    );
+    boolean existsByEmail(String email);
 
+    boolean existsByUsername(String username);
+
+    boolean existsByCpf(String cpf);
 }

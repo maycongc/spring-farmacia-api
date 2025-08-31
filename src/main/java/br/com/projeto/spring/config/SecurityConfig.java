@@ -7,7 +7,6 @@ import java.util.Set;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -99,8 +98,9 @@ public class SecurityConfig {
             var corsConfig = new CorsConfiguration();
 
             corsConfig.setAllowedOrigins(corsProperties.getAllowedOrigins());
-            corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-            corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
+            corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH"));
+            corsConfig.setAllowedHeaders(
+                    List.of("Authorization", "Content-Type", "X-Requested-With", "X-Skip-Auth-Refresh"));
             corsConfig.setAllowCredentials(true);
 
             return corsConfig;
@@ -110,7 +110,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // libera acesso a registro e login de usuários
-                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/refresh").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/auth/login", "/auth/register", "/auth/refresh",
+                                "/auth/forgot-password")
+                        .permitAll()
 
                         // libera acesso a autenticação e endpoints públicos
                         .requestMatchers("/public/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

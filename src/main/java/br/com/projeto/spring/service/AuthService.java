@@ -1,16 +1,25 @@
 package br.com.projeto.spring.service;
 
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 
 import br.com.projeto.spring.domain.dto.request.LoginRequest;
-import br.com.projeto.spring.domain.dto.response.TokenResponse;
+import br.com.projeto.spring.domain.dto.request.auth.RegisterRequest;
+import br.com.projeto.spring.domain.dto.response.auth.AuthResponse;
 import br.com.projeto.spring.domain.dto.response.auth.AuthUsuarioResponse;
+import br.com.projeto.spring.domain.dto.response.auth.RegisterResponse;
 import br.com.projeto.spring.exception.ResourceNotFoundException;
+import br.com.projeto.spring.exception.ValidationException;
 
 public interface AuthService {
-    TokenResponse login(LoginRequest request) throws AuthenticationException;
 
-    TokenResponse refreshToken(String refreshToken) throws AuthenticationException;
+    RegisterResponse register(RegisterRequest request) throws ValidationException;
+
+    AuthResponse login(LoginRequest request) throws AccessDeniedException;
+
+    AuthResponse refreshToken(String refreshToken) throws AuthenticationException;
 
     AuthUsuarioResponse obterUsuarioAtual() throws ResourceNotFoundException;
+
+    void logout(String refreshToken);
 }

@@ -10,34 +10,60 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.dto.request.LoginRequest;
-import br.com.projeto.spring.domain.dto.response.TokenResponse;
+import br.com.projeto.spring.domain.dto.request.auth.RegisterRequest;
+import br.com.projeto.spring.domain.dto.response.auth.AuthResponse;
 import br.com.projeto.spring.domain.dto.response.auth.AuthUsuarioResponse;
+import br.com.projeto.spring.domain.dto.response.auth.RegisterResponse;
 import br.com.projeto.spring.domain.model.Usuario;
 import br.com.projeto.spring.exception.ResourceNotFoundException;
+import br.com.projeto.spring.exception.ValidationException;
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import br.com.projeto.spring.i18n.MessageResolver;
-import br.com.projeto.spring.mapper.AuthUsuarioMapper;
+import br.com.projeto.spring.mapper.AuthMapper;
 import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.security.JwtUtil;
 import br.com.projeto.spring.service.AuthService;
+import br.com.projeto.spring.service.TokenService;
+import br.com.projeto.spring.util.Util;
+import br.com.projeto.spring.validation.AuthValidator;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
-    private final UsuarioRepository usuarioRepository;
-    private final AuthUsuarioMapper mapperAuthUsuario;
+    private final AuthMapper mapperAuth;
     private final AuthenticationManager authenticationManager;
-    private final JwtUtil jwtUtil;
+
     private final MessageResolver messages;
 
+    private final JwtUtil jwtUtil;
+    private final TokenService tokenService;
+
+    private final AuthValidator validator;
+    private final PasswordEncoder passwordEncoder;
+    private final UsuarioRepository usuarioRepository;
+
     @Override
-    public TokenResponse login(LoginRequest request) throws AccessDeniedException {
+    @Transactional
+    public RegisterResponse register(RegisterRequest request) throws ValidationException {
+
+        Usuario usuario = mapperAuth.toEntityRegister(request, passwordEncoder);
+        validator.validarCadastro(usuario);
+        usuarioRepository.save(usuario);
+
+        RegisterResponse response = mapperAuth.toResponseRegister(usuario);
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AuthResponse login(LoginRequest request) throws AccessDeniedException {
 
         String username = request.username();
         String senha = request.senha();
@@ -48,26 +74,26 @@ public class AuthServiceImpl implements AuthService {
             throw new AccessDeniedException(messages.get(ValidationMessagesKeys.AUTENTICACAO_FALHA)) {};
         }
 
+        AuthUsuarioResponse usuario = getUsuarioAutenticado(username);
         String accessToken = jwtUtil.generateToken(username);
-        String refreshToken = jwtUtil.generateRefreshToken(username);
+        String refreshToken = tokenService.createRefreshToken(username);
 
-        TokenResponse response = new TokenResponse(accessToken, refreshToken, "Bearer");
+        AuthResponse response = new AuthResponse(accessToken, refreshToken, "Bearer", usuario);
 
         return response;
     }
 
     @Override
-    public TokenResponse refreshToken(String refreshToken) throws AuthenticationException {
+    @Transactional(readOnly = true)
+    public AuthResponse refreshToken(String refreshToken) throws AuthenticationException {
 
-        if (!jwtUtil.validateToken(refreshToken) || !jwtUtil.isRefreshToken(refreshToken)) {
-            throw new AuthenticationException(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_INVALIDO) {};
-        }
+        String username = tokenService.validateAndGetUsername(refreshToken);
 
-        String username = jwtUtil.getUsernameFromToken(refreshToken);
+        AuthUsuarioResponse usuario = getUsuarioAutenticado(username);
         String newAccessToken = jwtUtil.generateToken(username);
-        String newRefreshToken = jwtUtil.generateRefreshToken(username);
+        String newRefreshToken = tokenService.rotateRefreshToken(refreshToken, username);
 
-        TokenResponse response = new TokenResponse(newAccessToken, newRefreshToken, "Bearer");
+        AuthResponse response = new AuthResponse(newAccessToken, newRefreshToken, "Bearer", usuario);
 
         return response;
     }
@@ -78,12 +104,15 @@ public class AuthServiceImpl implements AuthService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String username = authentication.getName();
 
-        Usuario usuario = usuarioRepository.findByUsernameWithPermissoesAndGrupos(username)
-                .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO) {});
+        return getUsuarioAutenticado(username);
+    }
 
-        List<String> permissoes = getPermissoesUsuario(usuario);
+    @Override
+    public void logout(String refreshToken) {
 
-        return mapperAuthUsuario.toResponse(usuario, permissoes);
+        if (Util.preenchido(refreshToken)) {
+            tokenService.revokeRefreshToken(refreshToken);
+        }
     }
 
     // Método utilitário para agregar permissões do usuário e dos grupos
@@ -105,4 +134,12 @@ public class AuthServiceImpl implements AuthService {
         return permissoes.stream().toList();
     }
 
+    private AuthUsuarioResponse getUsuarioAutenticado(String username) throws ResourceNotFoundException {
+        Usuario usuario = usuarioRepository.findByUsernameWithPermissoesAndGrupos(username)
+                .orElseThrow(() -> new ResourceNotFoundException(ValidationMessagesKeys.USUARIO_NAO_ENCONTRADO) {});
+
+        List<String> permissoes = getPermissoesUsuario(usuario);
+
+        return mapperAuth.userToResponse(usuario, permissoes);
+    }
 }

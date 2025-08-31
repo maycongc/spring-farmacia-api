@@ -8,6 +8,8 @@ public record LoginRequest(
         String username,
 
         @NotBlank
-        String senha) {
+        String senha,
 
-}
+        Boolean rememberMe
+
+) {}
