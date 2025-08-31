@@ -3,7 +3,6 @@ package br.com.projeto.spring.controller;
 import java.util.List;
 
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -66,7 +65,7 @@ public class RemedioController {
             @RequestParam(defaultValue = "0")
             String page) {
 
-        Pageable paginacao = Util.gerarPaginacao(page, pageSize, Sort.by("createdAt"));
+        Pageable paginacao = Util.gerarPaginacao(page, pageSize);
 
         PageResponse<RemedioResponse> remedioPage = service.listarRemedios(paginacao);
 
