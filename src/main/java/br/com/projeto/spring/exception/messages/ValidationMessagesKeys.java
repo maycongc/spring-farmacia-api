@@ -33,6 +33,7 @@ public class ValidationMessagesKeys {
     public static final String AUTENTICACAO_FALHA = "autenticacao.falha";
     public static final String AUTENTICACAO_TOKEN_INVALIDO = "autenticacao.token.invalido";
     public static final String AUTENTICACAO_REFRESH_TOKEN_INVALIDO = "autenticacao.refresh_token.invalido";
+    public static final String AUTENTICACAO_REFRESH_TOKEN_EXPIRADO = "autenticacao.refresh_token.expirado";
     public static final String AUTENTICACAO_JWT_TOKEN_FALTANDO = "autenticacao.jwt.token.faltando";
     public static final String AUTENTICACAO_PROCESSAMENTO_JWT = "autenticacao.processamento.jwt";
     public static final String AUTENTICACAO_JWT_USUARIO_NAO_HABILITADO = "autenticacao.jwt.usuario.nao.habilitado";

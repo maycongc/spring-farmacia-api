@@ -1,5 +1,6 @@
 package br.com.projeto.spring.service.impl;
 
+import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -26,11 +27,13 @@ import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.mapper.AuthMapper;
 import br.com.projeto.spring.repository.UsuarioRepository;
-import br.com.projeto.spring.security.JwtUtil;
 import br.com.projeto.spring.service.AuthService;
 import br.com.projeto.spring.service.TokenService;
+import br.com.projeto.spring.util.JwtUtil;
 import br.com.projeto.spring.util.Util;
 import br.com.projeto.spring.validation.AuthValidator;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -62,8 +65,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public AuthResponse login(LoginRequest request) throws AccessDeniedException {
+    @Transactional
+    public AuthResponse login(LoginRequest request, HttpServletRequest req) throws AccessDeniedException {
 
         String username = request.username();
         String senha = request.senha();
@@ -71,12 +74,22 @@ public class AuthServiceImpl implements AuthService {
         try {
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, senha));
         } catch (AccessDeniedException e) {
-            throw new AccessDeniedException(messages.get(ValidationMessagesKeys.AUTENTICACAO_FALHA)) {};
+            String msgErro = messages.get(ValidationMessagesKeys.AUTENTICACAO_FALHA);
+            throw new AccessDeniedException(msgErro) {};
         }
 
         AuthUsuarioResponse usuario = getUsuarioAutenticado(username);
-        String accessToken = jwtUtil.generateToken(username);
-        String refreshToken = tokenService.createRefreshToken(username);
+        String accessToken = jwtUtil.generateAccessToken(username);
+
+        boolean rememberMe = request.rememberMe();
+        long ttlSeconds = rememberMe ? Duration.ofDays(15).getSeconds() : Duration.ofHours(12).getSeconds();
+
+        String userIpAddress = extractClientIp(req);
+        String userAgent = req.getHeader("User-Agent");
+        String userMacAddress = req.getHeader("X-Client-MAC");
+
+        String refreshToken =
+                tokenService.createRefreshToken(username, ttlSeconds, userIpAddress, userMacAddress, userAgent);
 
         AuthResponse response = new AuthResponse(accessToken, refreshToken, "Bearer", usuario);
 
@@ -84,16 +97,18 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public AuthResponse refreshToken(String refreshToken) throws AuthenticationException {
+    @Transactional
+    public AuthResponse refreshToken(Cookie refreshTokenCookie) throws AuthenticationException {
 
-        String username = tokenService.validateAndGetUsername(refreshToken);
+        var rawOldToken = refreshTokenCookie.getValue();
+        var oldToken = tokenService.validateAndGetToken(rawOldToken);
+
+        var username = oldToken.getUsername();
 
         AuthUsuarioResponse usuario = getUsuarioAutenticado(username);
-        String newAccessToken = jwtUtil.generateToken(username);
-        String newRefreshToken = tokenService.rotateRefreshToken(refreshToken, username);
+        String newAccessToken = jwtUtil.generateAccessToken(username);
 
-        AuthResponse response = new AuthResponse(newAccessToken, newRefreshToken, "Bearer", usuario);
+        AuthResponse response = new AuthResponse(newAccessToken, null, "Bearer", usuario);
 
         return response;
     }
@@ -108,11 +123,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public void logout(String refreshToken) {
-
-        if (Util.preenchido(refreshToken)) {
-            tokenService.revokeRefreshToken(refreshToken);
-        }
+        tokenService.revokeRefreshToken(refreshToken);
     }
 
     // Método utilitário para agregar permissões do usuário e dos grupos
@@ -141,5 +154,15 @@ public class AuthServiceImpl implements AuthService {
         List<String> permissoes = getPermissoesUsuario(usuario);
 
         return mapperAuth.userToResponse(usuario, permissoes);
+    }
+
+    private String extractClientIp(HttpServletRequest request) {
+        String xf = request.getHeader("X-Forwarded-For");
+
+        if (Util.preenchido(xf)) {
+            return xf.split(",")[0].trim();
+        }
+
+        return request.getRemoteAddr();
     }
 }

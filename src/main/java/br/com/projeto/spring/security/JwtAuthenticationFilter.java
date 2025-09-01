@@ -13,6 +13,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
 import br.com.projeto.spring.i18n.MessageResolver;
+import br.com.projeto.spring.util.JwtUtil;
+import br.com.projeto.spring.util.Util;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,27 +48,28 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // Ignora endpoints públicos e POST /usuarios
         if (path.startsWith("/auth/login") || path.startsWith("/auth/register") || path.startsWith("/auth/refresh")
-                || path.startsWith("/public") || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")) {
+                || path.startsWith("/auth/forgot-password") || path.startsWith("/public")
+                || path.startsWith("/swagger-ui") || path.startsWith("/v3/api-docs")) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            String jwt = getJwtFromRequest(request);
+            String accessToken = getJwtFromRequest(request);
 
-            if (!StringUtils.hasText(jwt)) {
+            if (Util.vazio(accessToken)) {
                 SecurityContextHolder.clearContext();
                 sendUnauthorizedResponse(response, ValidationMessagesKeys.AUTENTICACAO_JWT_TOKEN_FALTANDO);
                 return;
             }
 
-            if (!jwtUtil.validateToken(jwt)) {
+            if (!jwtUtil.validateAccessToken(accessToken)) {
                 SecurityContextHolder.clearContext();
                 sendUnauthorizedResponse(response, ValidationMessagesKeys.AUTENTICACAO_TOKEN_INVALIDO);
                 return;
             }
 
-            String username = jwtUtil.getUsernameFromToken(jwt);
+            String username = jwtUtil.getUsernameFromAccessToken(accessToken);
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 

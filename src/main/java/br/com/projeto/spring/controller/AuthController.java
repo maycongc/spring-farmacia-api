@@ -19,6 +19,8 @@ import br.com.projeto.spring.domain.dto.response.auth.AuthUsuarioResponse;
 import br.com.projeto.spring.domain.dto.response.auth.RegisterResponse;
 import br.com.projeto.spring.service.AuthService;
 import br.com.projeto.spring.util.UtilCookie;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -43,9 +45,11 @@ public class AuthController {
 
             @RequestBody
             @Valid
-            LoginRequest request) {
+            LoginRequest request,
 
-        AuthResponse response = service.login(request);
+            HttpServletRequest req) {
+
+        AuthResponse response = service.login(request, req);
 
         ResponseCookie cookie = UtilCookie.gerarCookieLogin(response.refreshToken(), request.rememberMe());
         AuthDataResponse loginResponse =
@@ -58,15 +62,14 @@ public class AuthController {
     public ResponseEntity<AuthDataResponse> refresh(
 
             @CookieValue("refreshToken")
-            String refreshToken) {
+            Cookie refreshTokenCookie) {
 
-        AuthResponse response = service.refreshToken(refreshToken);
+        AuthResponse response = service.refreshToken(refreshTokenCookie);
 
-        ResponseCookie cookie = UtilCookie.gerarCookieRefresh(response.refreshToken());
         AuthDataResponse refreshResponse =
                 new AuthDataResponse(response.accessToken(), response.tipo(), response.usuario());
 
-        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString()).body(refreshResponse);
+        return ResponseEntity.ok().body(refreshResponse);
     }
 
     @GetMapping("/me")

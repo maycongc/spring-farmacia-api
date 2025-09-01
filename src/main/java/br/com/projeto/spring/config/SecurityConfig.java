@@ -29,7 +29,7 @@ import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.repository.UsuarioRepository;
 import br.com.projeto.spring.security.JwtAuthenticationEntryPoint;
 import br.com.projeto.spring.security.JwtAuthenticationFilter;
-import br.com.projeto.spring.security.JwtUtil;
+import br.com.projeto.spring.util.JwtUtil;
 import br.com.projeto.spring.util.Util;
 
 /**
