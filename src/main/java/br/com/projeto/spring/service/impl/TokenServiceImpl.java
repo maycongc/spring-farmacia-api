@@ -2,19 +2,17 @@ package br.com.projeto.spring.service.impl;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.projeto.spring.domain.model.RefreshToken;
-import br.com.projeto.spring.exception.messages.ValidationMessagesKeys;
-import br.com.projeto.spring.i18n.MessageResolver;
 import br.com.projeto.spring.repository.RefreshTokenRepository;
 import br.com.projeto.spring.service.TokenService;
 import br.com.projeto.spring.util.Util;
 import br.com.projeto.spring.util.UtilToken;
+import br.com.projeto.spring.validation.TokenValidator;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -23,12 +21,11 @@ public class TokenServiceImpl implements TokenService {
 
     private final RefreshTokenRepository repository;
     private final UtilToken utilToken;
-    private final MessageResolver messages;
+    private final TokenValidator validator;
 
     @Override
     @Transactional
-    public String createRefreshToken(String username, long ttlSeconds, String ipAddress, String macAddress,
-            String userAgent) {
+    public String createRefreshToken(String username, long ttlSeconds, String ipAddress, String userAgent) {
 
         String rawToken = utilToken.generateRawToken();
         String hashToken = utilToken.hmacSha512Base64(rawToken);
@@ -44,7 +41,6 @@ public class TokenServiceImpl implements TokenService {
         token.setExpiresAt(expiresAt);
         token.setRevoked(false);
         token.setIpAddress(ipAddress);
-        token.setMacAddress(macAddress);
         token.setUserAgent(userAgent);
 
         try {
@@ -65,28 +61,7 @@ public class TokenServiceImpl implements TokenService {
     @Transactional
     public RefreshToken validateAndGetToken(String rawToken) throws AuthenticationException {
 
-        if (Util.vazio(rawToken)) {
-            String msgErro = messages.get(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_INVALIDO);
-            throw new AuthenticationException(msgErro) {};
-        }
-
-        String hashToken = utilToken.hmacSha512Base64(rawToken);
-        var maybe = repository.findByTokenHashAndRevokedFalse(hashToken);
-
-        if (maybe.isEmpty()) {
-            String msgErro = messages.get(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_INVALIDO);
-            throw new AuthenticationException(msgErro) {};
-        }
-
-        RefreshToken token = maybe.get();
-
-        if (token.getExpiresAt().isBefore(Instant.now())) {
-            token.setRevoked(true);
-            repository.save(token);
-
-            String msgErro = messages.get(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_EXPIRADO);
-            throw new AuthenticationException(msgErro) {};
-        }
+        RefreshToken token = validator.validateRefresh(rawToken);
 
         token.setLastUsedAt(Instant.now());
         repository.save(token);
@@ -98,18 +73,15 @@ public class TokenServiceImpl implements TokenService {
     @Transactional
     public void revokeRefreshToken(String rawToken) throws AuthenticationException {
 
-        if (Util.vazio(rawToken)) {
-            String msgErro = messages.get(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_INVALIDO);
-            throw new AuthenticationException(msgErro) {};
+        RefreshToken token = validator.validateRevoke(rawToken);
+
+        if (Util.vazio(token)) {
+            return;
         }
 
-        String hashToken = utilToken.hmacSha512Base64(rawToken);
-        Optional<RefreshToken> maybe = repository.findByTokenHashAndRevokedFalse(hashToken);
-
-        maybe.ifPresent(token -> {
-            token.setRevoked(true);
-            repository.save(token);
-        });
+        token.setRevoked(true);
+        repository.save(token);
+        return;
     }
 
     @Override
@@ -127,21 +99,8 @@ public class TokenServiceImpl implements TokenService {
     @Override
     @Transactional(readOnly = true)
     public Long getRemainingSeconds(String rawToken) throws AuthenticationException {
-
-        if (Util.vazio(rawToken)) {
-            String msgErro = messages.get(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_INVALIDO);
-            throw new AuthenticationException(msgErro) {};
-        }
-
-        String hashToken = utilToken.hmacSha512Base64(rawToken);
-        var maybe = repository.findByTokenHashAndRevokedFalse(hashToken);
-
-        if (maybe.isEmpty()) {
-            String msgErro = messages.get(ValidationMessagesKeys.AUTENTICACAO_REFRESH_TOKEN_INVALIDO);
-            throw new AuthenticationException(msgErro) {};
-        }
-
-        return getRemainingSeconds(maybe.get());
+        var token = validator.validategetRemainingTime(rawToken);
+        return getRemainingSeconds(token);
     }
 
     @Override

@@ -11,6 +11,8 @@ import br.com.projeto.spring.domain.model.RefreshToken;
 @Repository
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
 
+    Optional<RefreshToken> findByTokenHash(String tokenHash);
+
     Optional<RefreshToken> findByTokenHashAndRevokedFalse(String tokenHash);
 
     List<RefreshToken> findAllByUsernameAndRevokedFalse(String username);

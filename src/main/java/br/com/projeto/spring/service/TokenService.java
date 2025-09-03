@@ -8,7 +8,7 @@ import br.com.projeto.spring.domain.model.RefreshToken;
 
 public interface TokenService {
 
-    String createRefreshToken(String username, long ttlSeconds, String ipAddress, String macAddress, String userAgent);
+    String createRefreshToken(String username, long ttlSeconds, String ipAddress, String userAgent);
 
     RefreshToken validateAndGetToken(String rawToken) throws AuthenticationException;
 

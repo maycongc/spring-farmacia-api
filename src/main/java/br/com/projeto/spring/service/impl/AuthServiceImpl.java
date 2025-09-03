@@ -81,15 +81,11 @@ public class AuthServiceImpl implements AuthService {
         AuthUsuarioResponse usuario = getUsuarioAutenticado(username);
         String accessToken = jwtUtil.generateAccessToken(username);
 
-        boolean rememberMe = request.rememberMe();
-        long ttlSeconds = rememberMe ? Duration.ofDays(15).getSeconds() : Duration.ofHours(12).getSeconds();
-
+        long ttlSeconds = request.rememberMe() ? Duration.ofDays(15).getSeconds() : Duration.ofHours(12).getSeconds();
         String userIpAddress = extractClientIp(req);
         String userAgent = req.getHeader("User-Agent");
-        String userMacAddress = req.getHeader("X-Client-MAC");
 
-        String refreshToken =
-                tokenService.createRefreshToken(username, ttlSeconds, userIpAddress, userMacAddress, userAgent);
+        String refreshToken = tokenService.createRefreshToken(username, ttlSeconds, userIpAddress, userAgent);
 
         AuthResponse response = new AuthResponse(accessToken, refreshToken, "Bearer", usuario);
 
