@@ -114,13 +114,17 @@ jobs:
           SHORT_SHA=${GITHUB_SHA:0:7}
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             VERSION="v${TIMESTAMP}-${SHORT_SHA}"
+            S3_FOLDER="Prod"
           else
             VERSION="v${TIMESTAMP}-${SHORT_SHA}-dev"
+            S3_FOLDER="Dev"
           fi
           ZIP_FILE="${APPLICATION_NAME}-${VERSION}.zip"
+          S3_KEY="${S3_FOLDER}/${ZIP_FILE}"
           echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
           echo "ZIP_FILE=${ZIP_FILE}" >> $GITHUB_OUTPUT
-          echo "Prepared VERSION=${VERSION} ZIP_FILE=${ZIP_FILE}"
+          echo "S3_KEY=${S3_KEY}" >> $GITHUB_OUTPUT
+          echo "Prepared VERSION=${VERSION} ZIP_FILE=${ZIP_FILE} S3_KEY=${S3_KEY}"
 
       - name: Build JAR artifact (skip tests)
         run: mvn -B clean package -DskipTests
@@ -154,16 +158,16 @@ jobs:
       - name: Upload ZIP to S3 (artifact for Elastic Beanstalk)
         env:
           ZIP_FILE: ${{ steps.prepare.outputs.ZIP_FILE }}
+          S3_KEY: ${{ steps.prepare.outputs.S3_KEY }}
           EB_S3_BUCKET: ${{ steps.prepare-s3.outputs.EB_S3_BUCKET }}
           AWS_REGION: ${{ env.AWS_REGION }}
         run: |
           set -euo pipefail
           export AWS_PAGER=""
-          echo "Uploading $ZIP_FILE -> s3://${EB_S3_BUCKET}/${ZIP_FILE}"
-          aws s3 cp "$ZIP_FILE" "s3://${EB_S3_BUCKET}/${ZIP_FILE}" --only-show-errors || ( echo "S3 upload failed" >&2 ; exit 1 )
-          # sanity check: head-object
-          aws s3api head-object --bucket "${EB_S3_BUCKET}" --key "${ZIP_FILE}" >/dev/null || ( echo "Uploaded object not found in S3 (head-object failed)" >&2 ; exit 1 )
-          echo "Uploaded ${ZIP_FILE} to s3://${EB_S3_BUCKET}/"
+          echo "Uploading $ZIP_FILE -> s3://${EB_S3_BUCKET}/${S3_KEY}"
+          aws s3 cp "$ZIP_FILE" "s3://${EB_S3_BUCKET}/${S3_KEY}" --only-show-errors || ( echo "S3 upload failed" >&2 ; exit 1 )
+          aws s3api head-object --bucket "${EB_S3_BUCKET}" --key "${S3_KEY}" >/dev/null || ( echo "Uploaded object not found in S3 (head-object failed)" >&2 ; exit 1 )
+          echo "Uploaded ${ZIP_FILE} to s3://${EB_S3_BUCKET}/${S3_KEY}"
 
       - name: Create notify script (used by build & deploy steps)
         run: |
@@ -291,6 +295,7 @@ jobs:
           EB_S3_BUCKET="elasticbeanstalk-${ACCOUNT_ID}-${AWS_REGION}"
           echo "EB_S3_BUCKET=${EB_S3_BUCKET}" >> $GITHUB_ENV
           echo "ZIP_FILE=${{ needs.build.outputs.ZIP_FILE }}" >> $GITHUB_ENV
+          echo "S3_KEY=${{ needs.build.outputs.S3_KEY }}" >> $GITHUB_ENV
           echo "VERSION=${{ needs.build.outputs.VERSION }}" >> $GITHUB_ENV
 
       - name: Ensure jq installed (needed by scripts)
@@ -303,13 +308,16 @@ jobs:
           set -euo pipefail
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             ENV_NAME="${{ env.EB_ENV_PROD }}"
+            S3_FOLDER="Prod"
           else
             ENV_NAME="${{ env.EB_ENV_DEV }}"
+            S3_FOLDER="Dev"
           fi
           echo "ENV_NAME=${ENV_NAME}" >> $GITHUB_ENV
           echo "VERSION=${{ needs.build.outputs.VERSION }}" >> $GITHUB_ENV
           echo "ZIP_FILE=${{ needs.build.outputs.ZIP_FILE }}" >> $GITHUB_ENV
-          # EB_S3_BUCKET já está garantido pelo step compute-bucket
+          echo "S3_KEY=${{ needs.build.outputs.S3_KEY }}" >> $GITHUB_ENV
+          echo "S3_FOLDER=${S3_FOLDER}" >> $GITHUB_ENV
 
       - name: Create helper scripts (cleanup & notify)
         run: |
@@ -322,21 +330,27 @@ jobs:
           BUCKET="$2"
           KEEP="${3:-5}"
           REGION="${4:-${AWS_REGION}}"
+          S3_FOLDER="${5:-}"
+
           export AWS_PAGER=""
           VERSIONS_JSON=$(aws elasticbeanstalk describe-application-versions --application-name "$APP" --output json || echo "{}")
-          TO_DELETE=$(echo "$VERSIONS_JSON" | jq -r --argjson keep "$KEEP" '
+          TO_DELETE=$(echo "$VERSIONS_JSON" | jq -r --argjson keep "$KEEP" --arg s3_folder "$S3_FOLDER" '
             if (.ApplicationVersions | length) > ($keep | tonumber)
-            then (.ApplicationVersions | sort_by(.DateCreated) | .[0:(length - ($keep|tonumber))] | .[].VersionLabel)
+            then (.ApplicationVersions | sort_by(.DateCreated) | .[0:(length - ($keep|tonumber))] | .[])
             else empty end
+            | select(.SourceBundle.S3Key | startswith($s3_folder + "/"))
+            | .VersionLabel + "|" + .SourceBundle.S3Key
           ')
           if [ -z "$TO_DELETE" ]; then
             echo "No versions to delete."
             exit 0
           fi
-          while read -r v; do
-            if [ -z "$v" ]; then continue; fi
+          while IFS="|" read -r v s3key; do
+            if [ -z "$v" ] || [ -z "$s3key" ]; then continue; fi
             echo "Deleting application version: $v"
             aws elasticbeanstalk delete-application-version --application-name "$APP" --version-label "$v" --delete-source-bundle || echo "Failed to delete version $v (continuing)"
+            echo "Deleting S3 object: $s3key"
+            aws s3 rm "s3://${BUCKET}/${s3key}" || echo "Failed to delete S3 object $s3key (continuing)"
           done <<< "$TO_DELETE"
           EOF
           chmod +x .github/scripts/cleanup_old_versions.sh
@@ -400,9 +414,9 @@ jobs:
         run: |
           set -euo pipefail
           export AWS_PAGER=""
-          echo "Checking s3://${EB_S3_BUCKET}/${ZIP_FILE}"
-          if ! aws s3api head-object --bucket "${EB_S3_BUCKET}" --key "${ZIP_FILE}" >/dev/null 2>&1; then
-            echo "ERROR: Artifact ${ZIP_FILE} not found in s3://${EB_S3_BUCKET}" >&2
+          echo "Checking s3://${EB_S3_BUCKET}/${S3_KEY}"
+          if ! aws s3api head-object --bucket "${EB_S3_BUCKET}" --key "${S3_KEY}" >/dev/null 2>&1; then
+            echo "ERROR: Artifact ${S3_KEY} not found in s3://${EB_S3_BUCKET}" >&2
             exit 1
           fi
           echo "Artifact present in S3"
@@ -415,13 +429,12 @@ jobs:
           LAST_VERSION=$(aws elasticbeanstalk describe-environments --environment-names "${ENV_NAME}" --query "Environments[0].VersionLabel" --output text || echo "unknown")
           echo "LAST_VERSION=${LAST_VERSION}" >> $GITHUB_ENV
 
-          # If a version with same label exists, delete it first to avoid conflict
           EXISTING=$(aws elasticbeanstalk describe-application-versions --application-name "${APPLICATION_NAME}" --version-labels "${VERSION}" --query "ApplicationVersions[0].VersionLabel" --output text || echo "")
           if [ "$EXISTING" = "${VERSION}" ]; then
             aws elasticbeanstalk delete-application-version --application-name "${APPLICATION_NAME}" --version-label "${VERSION}" --delete-source-bundle || echo "Warning: could not delete existing version ${VERSION}"
           fi
 
-          aws elasticbeanstalk create-application-version --application-name "${APPLICATION_NAME}" --version-label "${VERSION}" --source-bundle S3Bucket="${EB_S3_BUCKET}",S3Key="${ZIP_FILE}" --process --auto-create-application || ( echo "create-application-version failed" >&2 ; exit 1 )
+          aws elasticbeanstalk create-application-version --application-name "${APPLICATION_NAME}" --version-label "${VERSION}" --source-bundle S3Bucket="${EB_S3_BUCKET}",S3Key="${S3_KEY}" --process --auto-create-application || ( echo "create-application-version failed" >&2 ; exit 1 )
 
           START_TS=$(date +%s)
           echo "START_TS=${START_TS}" >> $GITHUB_ENV
@@ -568,4 +581,10 @@ jobs:
         if: ${{ success() }}
         run: |
           set -euo pipefail
-          .github/scripts/cleanup_old_versions.sh "${APPLICATION_NAME}" "${EB_S3_BUCKET}" "${RETENTION_VERSIONS}" "${AWS_REGION}" || echo "Cleanup non-fatal errors"
+          APP="${APPLICATION_NAME}"
+          BUCKET="${EB_S3_BUCKET}"
+          KEEP="${RETENTION_VERSIONS}"
+          REGION="${AWS_REGION}"
+          S3_FOLDER="${S3_FOLDER}"
+
+          .github/scripts/cleanup_old_versions.sh "$APP" "$BUCKET" "$KEEP" "$REGION" "$S3_FOLDER" || echo "Cleanup non-fatal errors"
