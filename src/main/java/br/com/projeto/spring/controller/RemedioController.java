@@ -1,8 +1,10 @@
 package br.com.projeto.spring.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -57,16 +59,31 @@ public class RemedioController {
      */
     @GetMapping
     @PreAuthorize("hasAuthority('remedio:read')")
-    public ResponseEntity<PageResponse<RemedioResponse>> listarRemedios(
+    public ResponseEntity<PageResponse<RemedioResponse>> listarRemediosPaginado(
 
             @RequestParam(defaultValue = "10")
             String pageSize,
 
             @RequestParam(defaultValue = "0")
-            String page) {
+            String page,
 
-        Pageable paginacao = Util.gerarPaginacao(page, pageSize);
+            @RequestParam
+            Map<String, String> params) {
 
+        var sortParam = params.get("sortBy");
+        var orderParam = params.get("order");
+
+        Sort sort = Sort.unsorted();
+
+        if (Util.preenchido(sortParam)) {
+            if (Util.preenchido(orderParam) && orderParam.equals("asc")) {
+                sort = Sort.by(sortParam).ascending();
+            } else {
+                sort = Sort.by(sortParam).descending();
+            }
+        }
+
+        Pageable paginacao = Util.gerarPaginacao(page, pageSize, sort);
         PageResponse<RemedioResponse> remedioPage = service.listarRemedios(paginacao);
 
         if (Util.vazio(remedioPage.content())) {

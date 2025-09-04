@@ -51,8 +51,7 @@ public class Util {
      * @return Pageable configurado.
      */
     public static Pageable gerarPaginacao(String page, String pageSize) {
-        Pageable pageable = PageRequest.of(Util.toInt(page), Util.toInt(pageSize));
-        return pageable;
+        return gerarPaginacao(page, pageSize, null);
     }
 
     /**
