@@ -37,7 +37,6 @@ jobs:
       BUILD_DURATION: ${{ steps.compute-build-duration.outputs.BUILD_DURATION }}
       BUILD_START_TS: ${{ steps.compute-build-duration.outputs.BUILD_START_TS }}
       BUILD_END_TS: ${{ steps.compute-build-duration.outputs.BUILD_END_TS }}
-      EB_S3_BUCKET: ${{ steps.prepare-s3.outputs.EB_S3_BUCKET }}
       JAR_FILE: ${{ steps.find-jar.outputs.JAR_FILE }}
 
     steps:
@@ -295,9 +294,7 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           EB_S3_BUCKET="elasticbeanstalk-${ACCOUNT_ID}-${AWS_REGION}"
           echo "EB_S3_BUCKET=${EB_S3_BUCKET}" >> $GITHUB_ENV
-          echo "ZIP_FILE=${{ needs.build.outputs.ZIP_FILE }}" >> $GITHUB_ENV
-          echo "S3_KEY=${{ needs.build.outputs.S3_KEY }}" >> $GITHUB_ENV
-          echo "VERSION=${{ needs.build.outputs.VERSION }}" >> $GITHUB_ENV
+          echo "Computed EB_S3_BUCKET=${EB_S3_BUCKET}" >&2
 
       - name: Ensure jq installed (needed by scripts)
         run: |
@@ -415,8 +412,8 @@ jobs:
         run: |
           set -euo pipefail
           export AWS_PAGER=""
-          # Use a chave S3_KEY passada do job build
           S3_KEY="${{ needs.build.outputs.S3_KEY }}"
+          EB_S3_BUCKET="${{ env.EB_S3_BUCKET }}"
           echo "Checking s3://${EB_S3_BUCKET}/${S3_KEY}"
           if ! aws s3api head-object --bucket "${EB_S3_BUCKET}" --key "${S3_KEY}" >/dev/null 2>&1; then
             echo "ERROR: Artifact ${S3_KEY} not found in s3://${EB_S3_BUCKET}" >&2
@@ -429,8 +426,8 @@ jobs:
         run: |
           set -euo pipefail
           export AWS_PAGER=""
-          # Use S3_KEY do build job
           S3_KEY="${{ needs.build.outputs.S3_KEY }}"
+          EB_S3_BUCKET="${{ env.EB_S3_BUCKET }}"
           LAST_VERSION=$(aws elasticbeanstalk describe-environments --environment-names "${ENV_NAME}" --query "Environments[0].VersionLabel" --output text || echo "unknown")
           echo "LAST_VERSION=${LAST_VERSION}" >> $GITHUB_ENV
 
@@ -587,7 +584,7 @@ jobs:
         run: |
           set -euo pipefail
           APP="${APPLICATION_NAME}"
-          BUCKET="${EB_S3_BUCKET}"
+          BUCKET="${EB_S3_BUCKET}"  # Agora vem do env
           KEEP="${RETENTION_VERSIONS}"
           REGION="${AWS_REGION}"
           S3_FOLDER="${S3_FOLDER}"
