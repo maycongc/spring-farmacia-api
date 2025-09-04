@@ -11,18 +11,14 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Ajuste aqui se seus nomes forem diferentes
   APPLICATION_NAME: farmacia-app
   EB_ENV_DEV: farmacia-app-dev
   EB_ENV_PROD: farmacia-app-prod
-  # AWS_REGION should be set in repo secrets (see instructions)
-  # AWS_ROLE_TO_ASSUME should be set in repo secrets (ARN of the OIDC-assumable role)
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
-    # Precisamos de id-token para OIDC assume role
     permissions:
       contents: read
       id-token: write
@@ -52,12 +48,10 @@ jobs:
           mvn -B test | tee mvn_test_output.txt
           TEST_SUMMARY=$(grep -E "Tests run:" mvn_test_output.txt | tail -n1 || echo "No tests run")
           echo "TEST_SUMMARY=${TEST_SUMMARY}" >> $GITHUB_ENV
-        # If tests fail, this step will fail the job (intended) and deployment will not occur.
 
       - name: Build artifact (skip tests)
         run: mvn -B clean package -DskipTests
 
-      # --------- Configure AWS creds via OIDC (recommended) ----------
       - name: Configure AWS credentials using OIDC (assume role)
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -72,7 +66,7 @@ jobs:
           ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "ACCOUNT_ID=${ACCOUNT_ID}" >> $GITHUB_ENV
 
-          EB_S3_BUCKET="elasticbeanstalk-${ACCOUNT_ID}-${AWS_REGION}"
+          EB_S3_BUCKET="elasticbeanstalk-${AWS_REGION}-${ACCOUNT_ID}"
           echo "EB_S3_BUCKET=${EB_S3_BUCKET}" >> $GITHUB_ENV
 
           if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
@@ -104,7 +98,7 @@ jobs:
           cd ..
           echo "ZIP created: $ZIP_FILE"
 
-          # Ensure S3 bucket exists (create if missing)
+          # Verifica se o bucket existe (cria se não existir)
           if ! aws s3api head-bucket --bucket "$EB_S3_BUCKET" 2>/dev/null; then
             echo "Bucket s3://$EB_S3_BUCKET does not exist. Creating..."
             if [ "$AWS_REGION" = "us-east-1" ]; then
@@ -189,8 +183,6 @@ jobs:
           TEST_SUMMARY: ${{ env.TEST_SUMMARY }}
         run: |
           set -euo pipefail
-
-          # ensure jq present
           if ! command -v jq >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y jq; fi
 
           echo "Getting last deployed version for environment $ENV_NAME..."
@@ -199,10 +191,12 @@ jobs:
           echo "Last deployed version: $LAST_VERSION"
 
           echo "Creating application version $VERSION..."
+
           aws elasticbeanstalk create-application-version \
             --application-name "$APPLICATION_NAME" \
             --version-label "$VERSION" \
             --source-bundle S3Bucket="$EB_S3_BUCKET",S3Key="$ZIP_FILE" \
+            --process \
             --auto-create-application || true
 
           echo "Updating environment $ENV_NAME to version $VERSION..."
