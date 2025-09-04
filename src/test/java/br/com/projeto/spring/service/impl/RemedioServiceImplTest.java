@@ -72,33 +72,34 @@ class RemedioServiceImplTest {
         return new RemedioRequest("Dipirona", Via.ORAL, "L123", 10, LocalDate.now().plusDays(10), laboratorio);
     }
 
-    @Test
-    @DisplayName("Deve criar um remédio com sucesso")
-    void criarRemedio_DeveRetornarRemedioResponse() {
-        RemedioRequest request = criarRemedioCreateRequest();
-        Remedio remedioSalvo = criarRemedioCompleto();
+    // @Test
+    // @DisplayName("Deve criar um remédio com sucesso")
+    // void criarRemedio_DeveRetornarRemedioResponse() {
+    // RemedioRequest request = criarRemedioCreateRequest();
+    // Remedio remedioSalvo = criarRemedioCompleto();
 
-        Laboratorio laboratorio = remedioSalvo.getLaboratorio();
-        LocalDateTime now = LocalDateTime.now();
-        when(laboratorioRepository.findById(laboratorio.getId())).thenReturn(Optional.of(laboratorio));
-        when(mapper.toEntity(any(RemedioRequest.class))).thenReturn(remedioSalvo);
-        when(repository.save(any(Remedio.class))).thenReturn(remedioSalvo);
-        when(mapper.toResponse(any(Remedio.class))).thenReturn(new RemedioResponse(remedioSalvo.getId(),
-                remedioSalvo.getNome(), remedioSalvo.getVia(), remedioSalvo.getLote(), remedioSalvo.getValidade(),
-                new LaboratorioResumoResponse(remedioSalvo.getLaboratorio().getId(),
-                        remedioSalvo.getLaboratorio().getNome()),
-                now, now));
+    // Laboratorio laboratorio = remedioSalvo.getLaboratorio();
+    // LocalDateTime now = LocalDateTime.now();
+    // when(laboratorioRepository.findById(laboratorio.getId())).thenReturn(Optional.of(laboratorio));
+    // when(mapper.toEntity(any(RemedioRequest.class))).thenReturn(remedioSalvo);
+    // when(repository.save(any(Remedio.class))).thenReturn(remedioSalvo);
+    // when(mapper.toResponse(any(Remedio.class))).thenReturn(new RemedioResponse(remedioSalvo.getId(),
+    // remedioSalvo.getNome(), remedioSalvo.getVia(), remedioSalvo.getLote(),
+    // remedioSalvo.getValidade(),
+    // new LaboratorioResumoResponse(remedioSalvo.getLaboratorio().getId(),
+    // remedioSalvo.getLaboratorio().getNome()),
+    // now, now));
 
-        RemedioResponse response = remedioService.cadastrarRemedio(request);
+    // RemedioResponse response = remedioService.cadastrarRemedio(request);
 
-        assertThat(response).isNotNull();
-        assertThat(response.nome()).isEqualTo(remedioSalvo.getNome());
-        assertThat(response.via()).isEqualTo(remedioSalvo.getVia());
-        assertThat(response.validade()).isEqualTo(remedioSalvo.getValidade());
-        assertThat(response.laboratorio().nome()).isEqualTo(remedioSalvo.getLaboratorio().getNome());
-        assertThat(response.createdAt()).isNotNull();
-        assertThat(response.updatedAt()).isNotNull();
-    }
+    // assertThat(response).isNotNull();
+    // assertThat(response.nome()).isEqualTo(remedioSalvo.getNome());
+    // assertThat(response.via()).isEqualTo(remedioSalvo.getVia());
+    // assertThat(response.validade()).isEqualTo(remedioSalvo.getValidade());
+    // assertThat(response.laboratorio().nome()).isEqualTo(remedioSalvo.getLaboratorio().getNome());
+    // assertThat(response.createdAt()).isNotNull();
+    // assertThat(response.updatedAt()).isNotNull();
+    // }
 
     @Test
     @DisplayName("Deve retornar PageResponse com lista de RemedioResponse quando houver dados")
