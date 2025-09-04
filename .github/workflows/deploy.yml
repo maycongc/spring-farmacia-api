@@ -14,18 +14,39 @@ env:
   APPLICATION_NAME: farmacia-app
   EB_ENV_DEV: farmacia-app-dev
   EB_ENV_PROD: farmacia-app-prod
+  RETENTION_VERSIONS: "10"
+  # Nota: AWS_REGION é lido dos secrets nos jobs (mais seguro/visível por job)
 
 jobs:
-  deploy:
+  ##############################################################################
+  # BUILD: testes, empacotar, produzir artifact (zip do jar), medir tempo de build
+  ##############################################################################
+  build:
+    name: Build & Test
     runs-on: ubuntu-latest
-
     permissions:
-      contents: read
       id-token: write
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+
+    outputs:
+      VERSION: ${{ steps.prepare.outputs.VERSION }}
+      ZIP_FILE: ${{ steps.prepare.outputs.ZIP_FILE }}
+      BUILD_DURATION: ${{ steps.compute-build-duration.outputs.BUILD_DURATION }}
+      BUILD_START_TS: ${{ steps.compute-build-duration.outputs.BUILD_START_TS }}
+      BUILD_END_TS: ${{ steps.compute-build-duration.outputs.BUILD_END_TS }}
+      EB_S3_BUCKET: ${{ steps.prepare-s3.outputs.EB_S3_BUCKET }}
+      JAR_FILE: ${{ steps.find-jar.outputs.JAR_FILE }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Record build start time
+        id: build-start
+        run: |
+          echo "BUILD_START_TS=$(date +%s)" >> $GITHUB_OUTPUT
 
       - name: Cache Maven repository
         uses: actions/cache@v4
@@ -41,16 +62,220 @@ jobs:
           distribution: corretto
           java-version: '21'
 
-      - name: Run unit tests (and capture summary)
+      - name: Run unit tests (capture summary)
         id: run-tests
         run: |
           set -o pipefail
           mvn -B test | tee mvn_test_output.txt
           TEST_SUMMARY=$(grep -E "Tests run:" mvn_test_output.txt | tail -n1 || echo "No tests run")
-          echo "TEST_SUMMARY=${TEST_SUMMARY}" >> $GITHUB_ENV
+          echo "TEST_SUMMARY=${TEST_SUMMARY}" >> $GITHUB_OUTPUT
 
-      - name: Build artifact (skip tests)
+      - name: Configure AWS credentials (for S3 & EB operations)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Prepare S3 bucket name (account-aware)
+        id: prepare-s3
+        run: |
+          set -euo pipefail
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          # bucket name following Elastic Beanstalk convention:
+          EB_S3_BUCKET="elasticbeanstalk-${ACCOUNT_ID}-${{ secrets.AWS_REGION }}"
+          echo "ACCOUNT_ID=${ACCOUNT_ID}" >> $GITHUB_OUTPUT
+          echo "EB_S3_BUCKET=${EB_S3_BUCKET}" >> $GITHUB_OUTPUT
+          echo "Computed EB_S3_BUCKET=${EB_S3_BUCKET}" >&2
+
+      - name: Create S3 bucket if missing (handles us-east-1 specially)
+        run: |
+          set -euo pipefail
+          export AWS_PAGER=""
+          BUCKET="${{ steps.prepare-s3.outputs.EB_S3_BUCKET }}"
+          REGION="${{ env.AWS_REGION }}"
+          if aws s3api head-bucket --bucket "$BUCKET" 2>/dev/null; then
+            echo "S3 bucket $BUCKET already exists"
+            exit 0
+          fi
+          echo "Creating S3 bucket $BUCKET in region $REGION"
+          if [ "$REGION" = "us-east-1" ]; then
+            aws s3api create-bucket --bucket "$BUCKET" --region "$REGION"
+          else
+            aws s3api create-bucket --bucket "$BUCKET" --create-bucket-configuration LocationConstraint="$REGION" --region "$REGION"
+          fi
+          # wait a moment for eventual eventual consistencies
+          sleep 2
+
+      - name: Prepare version metadata
+        id: prepare
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date +'%Y.%m.%d.%H%M%S')
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            VERSION="v${TIMESTAMP}-${SHORT_SHA}"
+          else
+            VERSION="v${TIMESTAMP}-${SHORT_SHA}-dev"
+          fi
+          ZIP_FILE="${APPLICATION_NAME}-${VERSION}.zip"
+          echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
+          echo "ZIP_FILE=${ZIP_FILE}" >> $GITHUB_OUTPUT
+          echo "Prepared VERSION=${VERSION} ZIP_FILE=${ZIP_FILE}"
+
+      - name: Build JAR artifact (skip tests)
         run: mvn -B clean package -DskipTests
+
+      - name: Find built JAR file
+        id: find-jar
+        run: |
+          set -euo pipefail
+          # prefer regular jar in target (ignore *-sources, *-javadoc, *-original)
+          JAR_FILE=$(find target -maxdepth 1 -type f -name "*.jar" ! -name "*-sources.jar" ! -name "*-javadoc.jar" ! -name "*-original.jar" | head -n1 || true)
+          if [ -z "$JAR_FILE" ]; then
+            echo "No JAR found in target/ — failing"
+            ls -la target || true
+            exit 1
+          fi
+          echo "Found JAR: $JAR_FILE"
+          echo "JAR_FILE=${JAR_FILE}" >> $GITHUB_OUTPUT
+          ls -la "${JAR_FILE}"
+
+      - name: Package artifact as ZIP (zip the JAR)
+        env:
+          ZIP_FILE: ${{ steps.prepare.outputs.ZIP_FILE }}
+          JAR_FILE: ${{ steps.find-jar.outputs.JAR_FILE }}
+        run: |
+          set -euo pipefail
+          echo "Zipping $JAR_FILE -> $ZIP_FILE"
+          # -j to junk the path so inside zip the file is at root
+          zip -j "$ZIP_FILE" "$JAR_FILE"
+          ls -la "$ZIP_FILE"
+
+      - name: Upload ZIP to S3 (artifact for Elastic Beanstalk)
+        env:
+          ZIP_FILE: ${{ steps.prepare.outputs.ZIP_FILE }}
+          EB_S3_BUCKET: ${{ steps.prepare-s3.outputs.EB_S3_BUCKET }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          export AWS_PAGER=""
+          echo "Uploading $ZIP_FILE -> s3://${EB_S3_BUCKET}/${ZIP_FILE}"
+          aws s3 cp "$ZIP_FILE" "s3://${EB_S3_BUCKET}/${ZIP_FILE}" --only-show-errors || ( echo "S3 upload failed" >&2 ; exit 1 )
+          # sanity check: head-object
+          aws s3api head-object --bucket "${EB_S3_BUCKET}" --key "${ZIP_FILE}" >/dev/null || ( echo "Uploaded object not found in S3 (head-object failed)" >&2 ; exit 1 )
+          echo "Uploaded ${ZIP_FILE} to s3://${EB_S3_BUCKET}/"
+
+      - name: Create notify script (used by build & deploy steps)
+        run: |
+          mkdir -p .github/scripts
+          cat > .github/scripts/notify_deploy.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          DISCORD_WEBHOOK="${DISCORD_WEBHOOK:-}"
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "No DISCORD_WEBHOOK set, skipping notify"
+            exit 0
+          fi
+          TITLE="$1"
+          DESCRIPTION="$2"
+          COLOR="$3"
+          FIELDS_JSON="$4"
+          AUTHOR_NAME="$5"
+          AUTHOR_URL="$6"
+          AUTHOR_ICON="$7"
+          PAYLOAD=$(jq -n --arg title "$TITLE" --arg desc "$DESCRIPTION" --arg color "$COLOR" --argjson fields "$FIELDS_JSON" --arg author "$AUTHOR_NAME" --arg author_url "$AUTHOR_URL" --arg author_icon "$AUTHOR_ICON" \
+            '{embeds:[{title:$title,description:$desc,color:($color|tonumber),author:{name:$author,url:$author_url,icon_url:$author_icon},fields:$fields,timestamp:(now|strftime("%Y-%m-%dT%H:%M:%SZ"))}]}' )
+          curl -sS -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK" || true
+          EOF
+          chmod +x .github/scripts/notify_deploy.sh
+
+      - name: Compute build duration
+        id: compute-build-duration
+        run: |
+          set -euo pipefail
+          BUILD_START="${{ steps.build-start.outputs.BUILD_START_TS }}"
+          BUILD_END=$(date +%s)
+          BUILD_DURATION=$((BUILD_END - BUILD_START))
+          echo "BUILD_START_TS=${BUILD_START}" >> $GITHUB_OUTPUT
+          echo "BUILD_END_TS=${BUILD_END}" >> $GITHUB_OUTPUT
+          echo "BUILD_DURATION=${BUILD_DURATION}" >> $GITHUB_OUTPUT
+
+      - name: Notify Discord - Build completed (rich, best-effort)
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          VERSION: ${{ steps.prepare.outputs.VERSION }}
+          ZIP_FILE: ${{ steps.prepare.outputs.ZIP_FILE }}
+          BUILD_SEC: ${{ steps.compute-build-duration.outputs.BUILD_DURATION }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+        run: |
+          set -euo pipefail
+          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y -qq jq; fi
+
+          BUILD_SEC=${BUILD_SEC:-0}
+          human_duration() {
+            local s=$1
+            printf '%02d:%02d:%02d' $((s/3600)) $(( (s%3600)/60 )) $((s%60))
+          }
+          BUILD_HUMAN=$(human_duration "${BUILD_SEC}")
+
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
+            ENV_NAME="${{ env.EB_ENV_PROD }}"
+          else
+            ENV_NAME="${{ env.EB_ENV_DEV }}"
+          fi
+
+          EB_CONSOLE="https://console.aws.amazon.com/elasticbeanstalk/home?region=${AWS_REGION}#/environments/${ENV_NAME}"
+
+          BRANCH=${GITHUB_REF##*/}
+          ENV_STRING=$([ "$BRANCH" = "main" ] && echo "production" || echo "development")
+          ENV_LINK="[${ENV_STRING}](${EB_CONSOLE})"
+
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          RUN_LINK="[Ver workflow](${RUN_URL})"
+          COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          COMMIT_LINK="[${SHORT_SHA}](${COMMIT_URL})"
+          AUTHOR_ICON="https://github.com/${GITHUB_ACTOR}.png"
+          AUTHOR_URL="https://github.com/${GITHUB_ACTOR}"
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
+          REPO_LINK="[${GITHUB_REPOSITORY}](${REPO_URL})"
+
+          FIELDS=$(jq -n \
+            --arg env "${ENV_LINK}" \
+            --arg repo_link "${REPO_LINK}" \
+            --arg branch "${BRANCH}" \
+            --arg commit "${COMMIT_LINK}" \
+            --arg run "${RUN_LINK}" \
+            --arg build_time "${BUILD_HUMAN}" \
+            '[ {name:"Ambiente", value:$env, inline:true},
+              {name:"Repositório", value:$repo_link, inline:true},
+              {name:"Branch", value:$branch, inline:true},
+              {name:"Commit", value:$commit, inline:true},
+              {name:"Run", value:$run, inline:true},
+              {name:"Build", value:$build_time, inline:true},
+              {name:"", value:"", inline:true}
+            ]')
+          ./.github/scripts/notify_deploy.sh "✅ Build concluído" "Build finalizado da ***${VERSION}*** e artefato criado no S3." "3066993" "$FIELDS" "${GITHUB_ACTOR}" "$AUTHOR_URL" "$AUTHOR_ICON"
+
+  ##############################################################################
+  # DEPLOY
+  ##############################################################################
+  deploy:
+    name: Deploy to Elastic Beanstalk
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      # EB_S3_BUCKET e ZIP_FILE serão definidos nas etapas abaixo
+      # VERSION passed to the job via prepare-deploy step abaixo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials using OIDC (assume role)
         uses: aws-actions/configure-aws-credentials@v4
@@ -58,331 +283,289 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Prepare variables (account id, s3 bucket, version, env)
-        id: prepare
+      - name: Compute S3 bucket name (garante EB_S3_BUCKET no ambiente)
+        id: compute-bucket
         run: |
-            set -euo pipefail
-            AWS_REGION=${{ secrets.AWS_REGION }}
-            ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-            echo "ACCOUNT_ID=${ACCOUNT_ID}" >> $GITHUB_ENV
+          set -euo pipefail
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          EB_S3_BUCKET="elasticbeanstalk-${ACCOUNT_ID}-${AWS_REGION}"
+          echo "EB_S3_BUCKET=${EB_S3_BUCKET}" >> $GITHUB_ENV
+          echo "ZIP_FILE=${{ needs.build.outputs.ZIP_FILE }}" >> $GITHUB_ENV
+          echo "VERSION=${{ needs.build.outputs.VERSION }}" >> $GITHUB_ENV
 
-            # Formato correto do bucket S3
-            EB_S3_BUCKET="elasticbeanstalk-${AWS_REGION}-${ACCOUNT_ID}"
-            echo "EB_S3_BUCKET=${EB_S3_BUCKET}" >> $GITHUB_ENV
+      - name: Ensure jq installed (needed by scripts)
+        run: |
+          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y -qq jq; fi
 
-            # Gera um timestamp único com segundos para evitar conflitos
-            TIMESTAMP=$(date +'%Y.%m.%d.%H%M%S')
-            SHORT_SHA=${GITHUB_SHA:0:7}
-            
-            if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
-            VERSION="v${TIMESTAMP}-${SHORT_SHA}"
+      - name: Prepare deploy variables
+        id: prepare-deploy
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_REF}" == "refs/heads/main" ]]; then
             ENV_NAME="${{ env.EB_ENV_PROD }}"
-            else
-            VERSION="v${TIMESTAMP}-dev-${SHORT_SHA}"
+          else
             ENV_NAME="${{ env.EB_ENV_DEV }}"
-            fi
+          fi
+          echo "ENV_NAME=${ENV_NAME}" >> $GITHUB_ENV
+          echo "VERSION=${{ needs.build.outputs.VERSION }}" >> $GITHUB_ENV
+          echo "ZIP_FILE=${{ needs.build.outputs.ZIP_FILE }}" >> $GITHUB_ENV
+          # EB_S3_BUCKET já está garantido pelo step compute-bucket
 
-            echo "VERSION=${VERSION}" >> $GITHUB_ENV
-            echo "ENV_NAME=${ENV_NAME}" >> $GITHUB_ENV
-            ZIP_FILE="${{ env.APPLICATION_NAME }}-${VERSION}.zip"
-            echo "ZIP_FILE=${ZIP_FILE}" >> $GITHUB_ENV
-
-            echo "Prepared ACCOUNT_ID=$ACCOUNT_ID, EB_S3_BUCKET=$EB_S3_BUCKET, VERSION=$VERSION, ENV_NAME=$ENV_NAME, ZIP_FILE=$ZIP_FILE"
-
-        # NOVO PASSO: Verificação de permissões AWS
-      - name: Verify AWS permissions
-        env:
-            EB_S3_BUCKET: ${{ env.EB_S3_BUCKET }}
+      - name: Create helper scripts (cleanup & notify)
         run: |
-            echo "Testing S3 permissions..."
-            aws s3api get-bucket-policy --bucket "$EB_S3_BUCKET" || echo "S3 GetBucketPolicy permission check failed (may be expected if no policy exists)"
-            
-            echo "Testing AutoScaling permissions..."
-            aws autoscaling describe-auto-scaling-groups --max-records 1 || echo "AutoScaling permission check failed"
-            
-            echo "Testing CloudFormation permissions..."
-            aws cloudformation describe-stacks --max-items 1 || echo "CloudFormation permission check failed"
-            
-            echo "Permission checks completed"
+          mkdir -p .github/scripts
 
-      - name: Package artifact and upload to S3
-        env:
-            EB_S3_BUCKET: ${{ env.EB_S3_BUCKET }}
-            ZIP_FILE: ${{ env.ZIP_FILE }}
-            AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-            set -euo pipefail
-            mkdir -p deploy
-            cp target/*.jar deploy/application.jar
-            cd deploy
-            zip -r "../$ZIP_FILE" .
-            cd ..
-            echo "ZIP created: $ZIP_FILE"
+          cat > .github/scripts/cleanup_old_versions.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          APP="$1"
+          BUCKET="$2"
+          KEEP="${3:-5}"
+          REGION="${4:-${AWS_REGION}}"
+          export AWS_PAGER=""
+          VERSIONS_JSON=$(aws elasticbeanstalk describe-application-versions --application-name "$APP" --output json || echo "{}")
+          TO_DELETE=$(echo "$VERSIONS_JSON" | jq -r --argjson keep "$KEEP" '
+            if (.ApplicationVersions | length) > ($keep | tonumber)
+            then (.ApplicationVersions | sort_by(.DateCreated) | .[0:(length - ($keep|tonumber))] | .[].VersionLabel)
+            else empty end
+          ')
+          if [ -z "$TO_DELETE" ]; then
+            echo "No versions to delete."
+            exit 0
+          fi
+          while read -r v; do
+            if [ -z "$v" ]; then continue; fi
+            echo "Deleting application version: $v"
+            aws elasticbeanstalk delete-application-version --application-name "$APP" --version-label "$v" --delete-source-bundle || echo "Failed to delete version $v (continuing)"
+          done <<< "$TO_DELETE"
+          EOF
+          chmod +x .github/scripts/cleanup_old_versions.sh
 
-            # Verifica se o bucket existe (cria se não existir)
-            if ! aws s3api head-bucket --bucket "$EB_S3_BUCKET" 2>/dev/null; then
-                echo "Bucket s3://$EB_S3_BUCKET does not exist. Creating..."
-                if [ "$AWS_REGION" = "us-east-1" ]; then
-                    aws s3api create-bucket --bucket "$EB_S3_BUCKET"
-                else
-                    aws s3api create-bucket --bucket "$EB_S3_BUCKET" --create-bucket-configuration LocationConstraint=$AWS_REGION
-                fi
-                echo "Bucket created."
-            else
-                echo "Bucket exists: s3://$EB_S3_BUCKET"
-            fi
-
-            echo "Uploading $ZIP_FILE to s3://$EB_S3_BUCKET/$ZIP_FILE"
-            aws s3 cp "$ZIP_FILE" "s3://$EB_S3_BUCKET/$ZIP_FILE"
-            echo "Upload complete."
+          cat > .github/scripts/notify_deploy.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          DISCORD_WEBHOOK="${DISCORD_WEBHOOK:-}"
+          if [ -z "$DISCORD_WEBHOOK" ]; then
+            echo "No DISCORD_WEBHOOK set, skipping notify"
+            exit 0
+          fi
+          TITLE="$1"
+          DESCRIPTION="$2"
+          COLOR="$3"
+          FIELDS_JSON="$4"
+          AUTHOR_NAME="$5"
+          AUTHOR_URL="$6"
+          AUTHOR_ICON="$7"
+          PAYLOAD=$(jq -n --arg title "$TITLE" --arg desc "$DESCRIPTION" --arg color "$COLOR" --argjson fields "$FIELDS_JSON" --arg author "$AUTHOR_NAME" --arg author_url "$AUTHOR_URL" --arg author_icon "$AUTHOR_ICON" \
+            '{embeds:[{title:$title,description:$desc,color:($color|tonumber),author:{name:$author,url:$author_url,icon_url:$author_icon},fields:$fields,timestamp:(now|strftime("%Y-%m-%dT%H:%M:%SZ"))}]}' )
+          curl -sS -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK" || true
+          EOF
+          chmod +x .github/scripts/notify_deploy.sh
 
       - name: Notify Discord - deploy started (rich)
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          VERSION: ${{ env.VERSION }}
-          ENV_NAME: ${{ env.ENV_NAME }}
-          ZIP_FILE: ${{ env.ZIP_FILE }}
-          EB_S3_BUCKET: ${{ env.EB_S3_BUCKET }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y jq; fi
-
-          BRANCH=${GITHUB_REF##*/}
-          SHORT_SHA=${GITHUB_SHA::7}
-          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
-          ARTIFACT_URL="https://${EB_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${ZIP_FILE}"
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          AUTHOR_ICON="https://github.com/${GITHUB_ACTOR}.png"
-
-          PAYLOAD=$(jq -n \
-            --arg title "Deploy iniciado — ${VERSION}" \
-            --arg url "$RUN_URL" \
-            --arg desc "🟦 Deploy iniciado para **${ENV_NAME}**" \
-            --arg author "$GITHUB_ACTOR" \
-            --arg author_url "${GITHUB_SERVER_URL}/${GITHUB_ACTOR}" \
-            --arg author_icon "$AUTHOR_ICON" \
-            --arg env "$ENV_NAME" \
-            --arg version "$VERSION" \
-            --arg branch "$BRANCH" \
-            --arg commit "$SHORT_SHA" \
-            --arg commit_url "$COMMIT_URL" \
-            --arg artifact "$ARTIFACT_URL" \
-            --arg ts "$TIMESTAMP" \
-            '{
-              embeds: [
-                {
-                  title: $title,
-                  url: $url,
-                  description: $desc,
-                  color: 3447003,
-                  author: { name: $author, url: $author_url, icon_url: $author_icon },
-                  fields: [
-                    { name: "Ambiente", value: $env, inline: true },
-                    { name: "Versão", value: $version, inline: true },
-                    { name: "Branch", value: $branch, inline: true },
-                    { name: "Commit (link)", value: ($commit + " — " + $commit_url), inline: false },
-                    { name: "Artefato (S3)", value: $artifact, inline: false }
-                  ],
-                  footer: { text: "'${{ env.APPLICATION_NAME }}' • GitHub Actions" },
-                  timestamp: $ts
-                }
-              ]
-            }'
-          )
-          curl -s -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK" || true
-
-      - name: Create EB version + update env (polling health + rollback) and notify
-        env:
-          APPLICATION_NAME: ${{ env.APPLICATION_NAME }}
-          EB_S3_BUCKET: ${{ env.EB_S3_BUCKET }}
-          ZIP_FILE: ${{ env.ZIP_FILE }}
-          VERSION: ${{ env.VERSION }}
-          ENV_NAME: ${{ env.ENV_NAME }}
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          TEST_SUMMARY: ${{ env.TEST_SUMMARY }}
         run: |
           set -euo pipefail
-            if ! command -v jq >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y jq; fi
+          EB_CONSOLE="https://console.aws.amazon.com/elasticbeanstalk/home?region=${AWS_REGION}#/environments/${ENV_NAME}"
+          BRANCH=${GITHUB_REF##*/}
 
-            echo "Getting last deployed version for environment $ENV_NAME..."
-            LAST_VERSION=$(aws elasticbeanstalk describe-environments --environment-names "$ENV_NAME" --query "Environments[0].VersionLabel" --output text || echo "unknown")
-            echo "LAST_VERSION=${LAST_VERSION}" >> $GITHUB_ENV
-            echo "Last deployed version: $LAST_VERSION"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          RUN_LINK="[Ver workflow](${RUN_URL})"
+          COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          COMMIT_LINK="[${SHORT_SHA}](${COMMIT_URL})"
+          ENV_STRING=$([ "$BRANCH" = "main" ] && echo "production" || echo "development")
+          ENV_LINK="[${ENV_STRING}](${EB_CONSOLE})"
 
-            # Tenta deletar a versão existente se houver
-            if aws elasticbeanstalk describe-application-versions --application-name "$APPLICATION_NAME" --version-labels "$VERSION" --query "ApplicationVersions[0].VersionLabel" --output text | grep -q "$VERSION"; then
-            echo "Version $VERSION already exists. Deleting it first..."
-            aws elasticbeanstalk delete-application-version --application-name "$APPLICATION_NAME" --version-label "$VERSION" --delete-source-bundle
-            fi
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
+          REPO_LINK="[${GITHUB_REPOSITORY}](${REPO_URL})"
+          FIELDS=$(jq -n \
+            --arg env "$ENV_LINK" \
+            --arg repo_link "$REPO_LINK" \
+            --arg branch "$BRANCH" \
+            --arg commit_link "$COMMIT_LINK" \
+            --arg run "$RUN_LINK" \
+            '[ {name:"Ambiente", value:$env, inline:true},
+              {name:"Repositório", value:$repo_link, inline:true},
+              {name:"Branch", value:$branch, inline:true},
+              {name:"Commit", value:$commit_link, inline:true},
+              {name:"Run", value:$run, inline:true},
+              {name:"", value:"", inline:true}
+            ]'
+          )
+          ./.github/scripts/notify_deploy.sh "⏳ Deploy iniciado" "Iniciando deploy da ***${VERSION}*** para o ambiente ***${ENV_NAME}***." "3447003" "$FIELDS" "${GITHUB_ACTOR}" "https://github.com/${GITHUB_ACTOR}" "https://github.com/${GITHUB_ACTOR}.png"
 
-            echo "Creating application version $VERSION..."
-            aws elasticbeanstalk create-application-version \
-            --application-name "$APPLICATION_NAME" \
-            --version-label "$VERSION" \
-            --source-bundle S3Bucket="$EB_S3_BUCKET",S3Key="$ZIP_FILE" \
-            --process \
-            --auto-create-application || true
+      - name: Verify artifact exists in S3 (uploaded by build)
+        run: |
+          set -euo pipefail
+          export AWS_PAGER=""
+          echo "Checking s3://${EB_S3_BUCKET}/${ZIP_FILE}"
+          if ! aws s3api head-object --bucket "${EB_S3_BUCKET}" --key "${ZIP_FILE}" >/dev/null 2>&1; then
+            echo "ERROR: Artifact ${ZIP_FILE} not found in s3://${EB_S3_BUCKET}" >&2
+            exit 1
+          fi
+          echo "Artifact present in S3"
 
-            echo "Updating environment $ENV_NAME to version $VERSION..."
-            aws elasticbeanstalk update-environment --environment-name "$ENV_NAME" --version-label "$VERSION"
+      - name: Create EB application version + update environment (polling + rollback)
+        id: create-and-update
+        run: |
+          set -euo pipefail
+          export AWS_PAGER=""
+          LAST_VERSION=$(aws elasticbeanstalk describe-environments --environment-names "${ENV_NAME}" --query "Environments[0].VersionLabel" --output text || echo "unknown")
+          echo "LAST_VERSION=${LAST_VERSION}" >> $GITHUB_ENV
 
-            # polling com timeout maior e verificação mais robusta
-            check_deploy() {
-            TIMEOUT=1200   # 20 minutos
-            INTERVAL=30
+          # If a version with same label exists, delete it first to avoid conflict
+          EXISTING=$(aws elasticbeanstalk describe-application-versions --application-name "${APPLICATION_NAME}" --version-labels "${VERSION}" --query "ApplicationVersions[0].VersionLabel" --output text || echo "")
+          if [ "$EXISTING" = "${VERSION}" ]; then
+            aws elasticbeanstalk delete-application-version --application-name "${APPLICATION_NAME}" --version-label "${VERSION}" --delete-source-bundle || echo "Warning: could not delete existing version ${VERSION}"
+          fi
+
+          aws elasticbeanstalk create-application-version --application-name "${APPLICATION_NAME}" --version-label "${VERSION}" --source-bundle S3Bucket="${EB_S3_BUCKET}",S3Key="${ZIP_FILE}" --process --auto-create-application || ( echo "create-application-version failed" >&2 ; exit 1 )
+
+          START_TS=$(date +%s)
+          echo "START_TS=${START_TS}" >> $GITHUB_ENV
+
+          aws elasticbeanstalk update-environment --environment-name "${ENV_NAME}" --version-label "${VERSION}" || ( echo "update-environment failed" >&2 ; exit 1 )
+
+          check_deploy() {
+            TIMEOUT=1200
             ELAPSED=0
+            INTERVAL=15
+            MAX_INTERVAL=60
             while [ $ELAPSED -lt $TIMEOUT ]; do
-                ENV_INFO=$(aws elasticbeanstalk describe-environments --environment-names "$ENV_NAME" --query "Environments[0]")
-                STATUS=$(echo "$ENV_INFO" | jq -r '.Status')
-                HEALTH=$(echo "$ENV_INFO" | jq -r '.Health')
-                CUR_VERSION=$(echo "$ENV_INFO" | jq -r '.VersionLabel')
-                
-                echo "Status=$STATUS Version=$CUR_VERSION Health=$HEALTH (elapsed ${ELAPSED}s)"
-
-                # success if version applied AND health is Green/Ok
-                if [ "$CUR_VERSION" == "$VERSION" ] && [ "$STATUS" == "Ready" ] && ([ "$HEALTH" == "Green" ] || [ "$HEALTH" == "Ok" ]); then
-                echo "Deployment healthy."
+              ENV_INFO=$(aws elasticbeanstalk describe-environments --environment-names "${ENV_NAME}" --query "Environments[0]" --output json || echo "{}")
+              STATUS=$(echo "$ENV_INFO" | jq -r '.Status // "Unknown"')
+              HEALTH=$(echo "$ENV_INFO" | jq -r '.Health // "Unknown"')
+              CUR_VERSION=$(echo "$ENV_INFO" | jq -r '.VersionLabel // empty')
+              echo "Status=${STATUS} Version=${CUR_VERSION} Health=${HEALTH} (elapsed ${ELAPSED}s)"
+              if [ -n "$CUR_VERSION" ] && [ "$CUR_VERSION" == "${VERSION}" ] && [ "$STATUS" == "Ready" ] && ( [ "$HEALTH" == "Green" ] || [ "$HEALTH" == "Ok" ] ); then
                 return 0
-                fi
-
-                # terminal states indicating problem
-                if [[ "$STATUS" == "Terminated" ]] || [[ "$STATUS" == "Terminating" ]] || [[ "$HEALTH" == "Red" && $ELAPSED -gt 300 ]]; then
-                echo "Environment status terminal: $STATUS or unhealthy for too long: $HEALTH"
+              fi
+              if [[ "$STATUS" == "Terminated" ]] || [[ "$STATUS" == "Terminating" ]]; then
+                echo "Environment in terminal state: ${STATUS}"
                 return 1
-                fi
-
-                sleep $INTERVAL
-                ELAPSED=$((ELAPSED+INTERVAL))
+              fi
+              if [[ "$HEALTH" == "Red" ]] && [ $ELAPSED -gt 300 ]; then
+                echo "Environment unhealthy (Red) for >300s"
+                return 1
+              fi
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+              INTERVAL=$((INTERVAL + 5))
+              if [ $INTERVAL -gt $MAX_INTERVAL ]; then INTERVAL=$MAX_INTERVAL; fi
             done
-
-            echo "Timeout waiting for healthy deployment (waited ${TIMEOUT}s)"
+            echo "Timeout waiting for healthy deployment"
             return 1
           }
 
           if check_deploy; then
-            echo "✅ Deploy completed and healthy: $VERSION"
-
-            # notify success
-            if [ -n "${DISCORD_WEBHOOK:-}" ]; then
-              BRANCH=${GITHUB_REF##*/}
-              SHORT_SHA=${GITHUB_SHA::7}
-              RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-              COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
-              ARTIFACT_URL="https://${EB_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${ZIP_FILE}"
-              EB_CONSOLE="https://console.aws.amazon.com/elasticbeanstalk/home?region=${AWS_REGION}#/environments/${ENV_NAME}"
-              TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              AUTHOR_ICON="https://github.com/${GITHUB_ACTOR}.png"
-
-              PAYLOAD=$(jq -n \
-                --arg title "✅ Deploy concluído — ${VERSION}" \
-                --arg url "$RUN_URL" \
-                --arg desc "✅ A versão *${VERSION}* foi implantada com sucesso no ambiente **${ENV_NAME}**." \
-                --arg author "$GITHUB_ACTOR" \
-                --arg author_url "${GITHUB_SERVER_URL}/${GITHUB_ACTOR}" \
-                --arg author_icon "$AUTHOR_ICON" \
-                --arg env "$ENV_NAME" \
-                --arg version "$VERSION" \
-                --arg branch "$BRANCH" \
-                --arg commit "$SHORT_SHA" \
-                --arg commit_url "$COMMIT_URL" \
-                --arg artifact "$ARTIFACT_URL" \
-                --arg eb_console "$EB_CONSOLE" \
-                --arg tests "$TEST_SUMMARY" \
-                --arg ts "$TIMESTAMP" \
-                '{
-                  embeds: [
-                    {
-                      title: $title,
-                      url: $url,
-                      description: $desc,
-                      color: 3066993,
-                      author: { name: $author, url: $author_url, icon_url: $author_icon },
-                      fields: [
-                        { name: "Ambiente", value: $env, inline: true },
-                        { name: "Versão", value: $version, inline: true },
-                        { name: "Branch", value: $branch, inline: true },
-                        { name: "Commit", value: ($commit + " — " + $commit_url), inline: false },
-                        { name: "Artefato (S3)", value: $artifact, inline: false },
-                        { name: "EB Console", value: $eb_console, inline: false },
-                        { name: "Resumo dos testes", value: $tests, inline: false }
-                      ],
-                      footer: { text: "'${{ env.APPLICATION_NAME }}' • GitHub Actions", icon_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" },
-                      timestamp: $ts
-                    }
-                  ]
-                }'
-              )
-              curl -s -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK" || true
-            fi
-
+            END_TS=$(date +%s)
+            DURATION=$((END_TS - START_TS))
+            echo "DEPLOY_DURATION=${DURATION}" >> $GITHUB_OUTPUT
+            echo "DEPLOY_END_TS=${END_TS}" >> $GITHUB_OUTPUT
+            echo "DEPLOY_START_TS=${START_TS}" >> $GITHUB_OUTPUT
+            echo "Deployment succeeded in ${DURATION}s"
           else
-            echo "⚠️ Deploy failed or unhealthy. Rolling back to $LAST_VERSION"
+            DIAG_FILE="deploy_diagnostics_${VERSION}.txt"
+            {
+              echo "ENV INFO:"
+              aws elasticbeanstalk describe-environments --environment-names "${ENV_NAME}" --output json || true
+              echo
+              echo "LAST 50 EVENTS (preview):"
+              aws elasticbeanstalk describe-events --environment-name "${ENV_NAME}" --max-items 50 --query 'Events[].[EventDate,Severity,Message]' --output json | jq -r '.[] | @tsv' | sed 's/\t/ | /g' | head -n 40 || true
+              echo
+              echo "ENV RESOURCES:"
+              aws elasticbeanstalk describe-environment-resources --environment-name "${ENV_NAME}" --output json || true
+              echo
+              echo "APP VERSIONS (preview):"
+              aws elasticbeanstalk describe-application-versions --application-name "${APPLICATION_NAME}" --max-items 50 --output json || true
+            } > "${DIAG_FILE}" || true
+            echo "DIAG_FILE=${DIAG_FILE}" >> $GITHUB_ENV
 
-            # notify failure + rollback started
-            if [ -n "${DISCORD_WEBHOOK:-}" ]; then
-              BRANCH=${GITHUB_REF##*/}
-              SHORT_SHA=${GITHUB_SHA::7}
-              RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-              COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
-              ARTIFACT_URL="https://${EB_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${ZIP_FILE}"
-              EB_CONSOLE="https://console.aws.amazon.com/elasticbeanstalk/home?region=${AWS_REGION}#/environments/${ENV_NAME}"
-              TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-              AUTHOR_ICON="https://github.com/${GITHUB_ACTOR}.png"
-
-              PAYLOAD=$(jq -n \
-                --arg title "⚠️ Deploy falhou — rollback acionado" \
-                --arg url "$RUN_URL" \
-                --arg desc "⚠️ A implantação da versão *${VERSION}* no ambiente **${ENV_NAME}** encontrou problemas. Rollback requisitado." \
-                --arg author "$GITHUB_ACTOR" \
-                --arg author_url "${GITHUB_SERVER_URL}/${GITHUB_ACTOR}" \
-                --arg author_icon "$AUTHOR_ICON" \
-                --arg env "$ENV_NAME" \
-                --arg version "$VERSION" \
-                --arg last_version "$LAST_VERSION" \
-                --arg branch "$BRANCH" \
-                --arg commit "$SHORT_SHA" \
-                --arg commit_url "$COMMIT_URL" \
-                --arg artifact "$ARTIFACT_URL" \
-                --arg eb_console "$EB_CONSOLE" \
-                --arg tests "$TEST_SUMMARY" \
-                --arg ts "$TIMESTAMP" \
-                '{
-                  embeds: [
-                    {
-                      title: $title,
-                      url: $url,
-                      description: $desc,
-                      color: 15158332,
-                      author: { name: $author, url: $author_url, icon_url: $author_icon },
-                      fields: [
-                        { name: "Ambiente", value: $env, inline: true },
-                        { name: "Versão tentativa", value: $version, inline: true },
-                        { name: "Versão restaurada", value: ($last_version // "N/A"), inline: true },
-                        { name: "Branch", value: $branch, inline: true },
-                        { name: "Commit", value: ($commit + " — " + $commit_url), inline: false },
-                        { name: "Artefato (S3)", value: $artifact, inline: false },
-                        { name: "EB Console", value: $eb_console, inline: false },
-                        { name: "Resumo dos testes", value: $tests, inline: false }
-                      ],
-                      footer: { text: "'${{ env.APPLICATION_NAME }}' • GitHub Actions", icon_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" },
-                      timestamp: $ts
-                    }
-                  ]
-                }'
-              )
-              curl -s -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK" || true
-            fi
-
-            # rollback
-            if [ "$LAST_VERSION" != "unknown" ] && [ -n "$LAST_VERSION" ]; then
-              echo "Triggering rollback to $LAST_VERSION..."
-              aws elasticbeanstalk update-environment --environment-name "$ENV_NAME" --version-label "$LAST_VERSION"
-              echo "Rollback requested."
-            else
-              echo "No previous version to rollback to."
+            if [ -n "${LAST_VERSION}" ] && [ "${LAST_VERSION}" != "unknown" ]; then
+              aws elasticbeanstalk update-environment --environment-name "${ENV_NAME}" --version-label "${LAST_VERSION}" || echo "Rollback request failed"
             fi
 
             exit 1
           fi
+
+      - name: Notify Discord - deploy succeeded (rich)
+        if: ${{ success() }}
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          BUILD_SEC: ${{ needs.build.outputs.BUILD_DURATION }}
+          DEPLOY_SEC: ${{ steps.create-and-update.outputs.DEPLOY_DURATION }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          EB_S3_BUCKET: ${{ env.EB_S3_BUCKET }}
+          ZIP_FILE: ${{ env.ZIP_FILE }}
+          VERSION: ${{ needs.build.outputs.VERSION }}
+        run: |
+          set -euo pipefail
+          if ! command -v jq >/dev/null 2>&1; then sudo apt-get update -qq && sudo apt-get install -y -qq jq; fi
+
+          BUILD_SEC=${BUILD_SEC:-0}
+          DEPLOY_SEC=${DEPLOY_SEC:-0}
+          human_duration() {
+            local s=$1
+            printf '%02d:%02d:%02d' $((s/3600)) $(( (s%3600)/60 )) $((s%60))
+          }
+          BUILD_HUMAN=$(human_duration "${BUILD_SEC}")
+          DEPLOY_HUMAN=$(human_duration "${DEPLOY_SEC}")
+          TOTAL_SEC=$(( BUILD_SEC + DEPLOY_SEC ))
+          TOTAL_HUMAN=$(human_duration "${TOTAL_SEC}")
+
+          # artifact public URL (region-aware)
+          if [ "${AWS_REGION}" = "us-east-1" ]; then
+            ARTIFACT_URL="https://${EB_S3_BUCKET}.s3.amazonaws.com/${ZIP_FILE}"
+          else
+            ARTIFACT_URL="https://${EB_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${ZIP_FILE}"
+          fi
+
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          SHORT_SHA=${GITHUB_SHA:0:7}
+
+          AUTHOR_ICON="https://github.com/${GITHUB_ACTOR}.png"
+
+          EB_CONSOLE="https://console.aws.amazon.com/elasticbeanstalk/home?region=${AWS_REGION}#/environments/${ENV_NAME}"
+
+          BRANCH=${GITHUB_REF##*/}
+          ENV_STRING=$([ "$BRANCH" = "main" ] && echo "production" || echo "development")
+          ENV_LINK="[${ENV_STRING}](${EB_CONSOLE})"
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          COMMIT_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
+          COMMIT_LINK="[${SHORT_SHA}](${COMMIT_URL})"
+          REPO_URL="https://github.com/${GITHUB_REPOSITORY}"
+          REPO_LINK="[${GITHUB_REPOSITORY}](${REPO_URL})"
+          FIELDS=$(jq -n \
+            --arg env "$ENV_LINK" \
+            --arg repo_link "$REPO_LINK" \
+            --arg branch "$BRANCH" \
+            --arg commit "$COMMIT_LINK" \
+            --arg build_time "$BUILD_HUMAN" \
+            --arg deploy_time "$DEPLOY_HUMAN" \
+            --arg total_time "$TOTAL_HUMAN" \
+            '[ {name:"Ambiente", value:$env, inline:true},
+              {name:"Repositório", value:$repo_link, inline:true},
+              {name:"Branch", value:$branch, inline:true},
+              {name:"Commit", value:$commit, inline:false},
+              {name:"Build", value:$build_time, inline:true},
+              {name:"Deploy", value:$deploy_time, inline:true},
+              {name:"Total", value:$total_time, inline:true}
+            ]'
+          )
+          ./.github/scripts/notify_deploy.sh "✅ Deploy concluído" "Versão ***${VERSION}*** implantada com sucesso em ***${ENV_NAME}***." "3066993" "$FIELDS" "${GITHUB_ACTOR}" "https://github.com/${GITHUB_ACTOR}" "https://github.com/${GITHUB_ACTOR}.png"
+
+      - name: Upload diagnostics artifact (on failure)
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-diagnostics-${{ needs.build.outputs.VERSION }}
+          path: ${{ env.DIAG_FILE }}
+
+      - name: Cleanup old EB application versions & S3 (keep last N)
+        if: ${{ success() }}
+        run: |
+          set -euo pipefail
+          .github/scripts/cleanup_old_versions.sh "${APPLICATION_NAME}" "${EB_S3_BUCKET}" "${RETENTION_VERSIONS}" "${AWS_REGION}" || echo "Cleanup non-fatal errors"
