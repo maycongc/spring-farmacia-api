@@ -56,7 +56,7 @@ public class Usuario extends BaseEntity {
     private String uf;
 
     @Column(name = "is_admin")
-    private boolean isAdmin;
+    private boolean isAdmin = false;
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "usuario_grupo_usuario", joinColumns = @JoinColumn(name = "usuario_id"),
